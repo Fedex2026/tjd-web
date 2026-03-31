@@ -1,73 +1,213 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TJD - Tarjetero Digital</title>
-
-<link rel="stylesheet" href="style.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TJD | Buscar negocios</title>
+  <link rel="stylesheet" href="style.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+  />
 </head>
-
 <body>
+  <div class="app">
+    <header class="hero">
+      <div class="hero-overlay"></div>
 
-<header class="header">
+      <div class="hero-content">
+        <div class="brand-row">
+          <div class="brand-logo">TJD</div>
+          <div class="brand-copy">
+            <h1>Buscar negocios, servicios<br />y categorías</h1>
+          </div>
+        </div>
 
-<div class="logo">TJD</div>
+        <div class="search-panel">
+          <div class="top-search-row">
+            <div class="search-box">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Buscar negocios, servicios o categorías..."
+              />
+              <button id="searchBtn" class="search-btn">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </button>
+            </div>
 
-<h1>Buscar negocios, servicios y categorías</h1>
+            <button class="cta-yellow" id="btnKmTop">
+              <i class="fa-solid fa-location-dot"></i>
+              Buscar por km
+            </button>
 
-<div class="search">
+            <button class="mini-icon">
+              <i class="fa-solid fa-user"></i>
+            </button>
 
-<input type="text" placeholder="Buscar negocios, servicios o categorías...">
+            <button class="mini-icon">
+              <i class="fa-solid fa-id-card"></i>
+            </button>
+          </div>
 
-<button class="km">Buscar por km</button>
+          <div class="quick-actions">
+            <button class="action-btn action-purple" id="btnKmBottom">
+              <i class="fa-solid fa-location-dot"></i>
+              Buscar por km
+            </button>
 
-</div>
+            <button class="action-btn action-pink" id="btnSubirTarjeta">
+              <i class="fa-solid fa-circle-play"></i>
+              Sube tu tarjeta
+            </button>
 
-<div class="buttons">
+            <button class="action-btn action-dark" id="btnDescargarApp">
+              <i class="fa-brands fa-google-play"></i>
+              Descargar app
+            </button>
 
-<button class="btn1">Buscar por km</button>
-<button class="btn2">Sube tu tarjeta</button>
-<button class="btn3">Descargar app</button>
-<button class="btn4">App Store</button>
+            <button class="action-btn action-dark" id="btnAppStore">
+              <i class="fa-brands fa-apple"></i>
+              App Store
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
 
-</div>
+    <section class="categories-section">
+      <div class="categories-row">
+        <button class="chip chip-green active" data-category="todos">Todos</button>
+        <button class="chip chip-blue" data-category="medicos">Médicos</button>
+        <button class="chip chip-cyan" data-category="seguros">Seguros</button>
+        <button class="chip chip-violet" data-category="talleres">Talleres</button>
+        <button class="chip chip-purple" data-category="panaderias">Panaderías</button>
+        <button class="chip chip-pink" data-category="restaurantes">Restaurantes</button>
+        <button class="chip chip-light" id="btnMas">Más</button>
+        <button class="chip chip-grid" id="btnGrid">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+      </div>
+    </section>
 
-</header>
+    <main class="main-content">
+      <section class="section-title-wrap">
+        <h2>Negocios destacados</h2>
+      </section>
 
-<section class="categorias">
+      <section class="cards-container" id="cardsContainer">
+        <!-- CARD 1 -->
+        <article class="business-card featured-card" data-category="seguros">
+          <div class="featured-left">
+            <div class="featured-logo">TJD</div>
+          </div>
 
-<button>Todos</button>
-<button>Médicos</button>
-<button>Seguros</button>
-<button>Talleres</button>
-<button>Panaderías</button>
-<button>Restaurantes</button>
+          <div class="featured-right">
+            <h3>Lic. Fabio Lara Gonzalez</h3>
 
-</section>
+            <div class="denison-logo-wrap">
+              <div class="denison-symbol">◎</div>
+              <div class="denison-copy">
+                <div class="denison-name">DENISON</div>
+                <div class="denison-sub">INTERNACIONAL, S.A. DE C.V.</div>
+              </div>
+            </div>
 
-<section class="contenido">
+            <p class="business-address">
+              Mariano Escobedo 131-A Fracc Ind san Nicolas<br />
+              Tlalnepantla, Estado de México
+            </p>
 
-<h2>Negocios destacados</h2>
+            <p class="business-tel">TEL: &nbsp; +52 555564585</p>
 
-<div class="card">
+            <div class="business-links">
+              <div class="info-line">
+                <i class="fa-regular fa-envelope"></i>
+                <span>fabiola@denisoninternacional.com</span>
+              </div>
 
-<div class="card-logo">TJD</div>
+              <div class="info-line">
+                <i class="fa-solid fa-globe"></i>
+                <span>denisoninternacional.com</span>
+                <span class="stars gold">★★★★☆</span>
+              </div>
+            </div>
+          </div>
+        </article>
 
-<div class="card-info">
+        <!-- CARD 2 -->
+        <article class="business-card promo-card" data-category="talleres">
+          <div class="banner-art">
+            <div class="banner-shine"></div>
 
-<h3>Lic. Fabio Lara Gonzalez</h3>
+            <div class="banner-top">
+              <div class="banner-title-big">RADIADORES INDUSTRIALES</div>
+              <div class="banner-subtitle">VENTA, FABRICACIÓN Y REPARACIÓN</div>
+            </div>
 
-<p>Mariano Escobedo 131-A</p>
+            <div class="banner-center">
+              <div class="banner-small-text">SOMOS ESPECIALISTAS EN SOLDADURA DE ALUMINIO</div>
+              <div class="banner-name">ANDRÉS IVÁN RUIZ VERA</div>
+              <div class="banner-service">SERVICIO A DOMICILIO</div>
+            </div>
 
-<p>+52 555564585</p>
+            <div class="banner-km-badge">Buscar a 5 km &rsaquo;</div>
 
-</div>
+            <div class="banner-bottom">
+              <div>Blvd Tultitlán Pie, Lote 7,<br />Los Reyes Tultitlán, Edo. de México.</div>
+              <div class="banner-phone">Cel. 55 8320 8687</div>
+            </div>
+          </div>
 
-</div>
+          <div class="promo-info">
+            <h3>Radiadores Industriales</h3>
 
-</section>
+            <div class="detail-line">
+              <i class="fa-solid fa-location-dot"></i>
+              <span>Blvd Tultitlán Pie, Lote 7, Los Reyes Tultitlán, Estado de México</span>
+            </div>
 
+            <div class="detail-line">
+              <i class="fa-regular fa-clock"></i>
+              <span>8 am a 6 pm</span>
+            </div>
+
+            <div class="detail-line whatsapp-line">
+              <i class="fa-brands fa-whatsapp"></i>
+              <span>+52 5588208687</span>
+            </div>
+
+            <div class="promo-footer">
+              <div class="footer-actions">
+                <button class="footer-chip">
+                  <i class="fa-solid fa-location-dot"></i>
+                  Ubicación
+                </button>
+
+                <button class="footer-chip footer-chip-green">
+                  <i class="fa-solid fa-phone"></i>
+                  Teléfono
+                </button>
+
+                <button class="footer-chip">
+                  <i class="fa-solid fa-location-pin"></i>
+                  Más
+                </button>
+
+                <button class="footer-chip">
+                  <i class="fa-solid fa-globe"></i>
+                  Web / Promo
+                </button>
+              </div>
+
+              <div class="footer-stars gold">★★★★★</div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
