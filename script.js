@@ -161,7 +161,7 @@ function getCardFilterKey(card) {
   const baseSlug = getBaseCategorySlugFromNormalized(normalizedCategory);
 
   if (baseSlug) return baseSlug;
-  if (normalizedCategory) return real:${normalizedCategory};
+  if (normalizedCategory) return `real:${normalizedCategory}`;
   return "real:otros";
 }
 
