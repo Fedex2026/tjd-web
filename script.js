@@ -1085,7 +1085,7 @@ function renderCards(cards) {
             <i class="fa-regular fa-comment-dots"></i>
             <div>
               ${comments
-                .map((comment) => `<div style="margin-bottom:6px;">• ${escapeHtml(comment)`}</div>)
+                .map((comment) => `<div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>`)
                 .join("")}
             </div>
           </div>
