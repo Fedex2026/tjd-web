@@ -3,6 +3,11 @@ import {
   getFirestore,
   collection,
   onSnapshot,
+  getDocs,
+  addDoc,
+  doc,
+  setDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -50,6 +55,14 @@ const TARJETERO_EMAIL = "ventas@tarjeterodigitaltjd.com"; // CAMBIA ESTE CORREO
 
 let allBusinessCards = [];
 let currentCategory = "todos";
+let currentKmFilter = null;
+let currentUserPosition = null;
+
+const commentsUnsubs = new Map();
+const ratingsUnsubs = new Map();
+let bannerUnsub = null;
+let bannerCloseTimer = null;
+let bannerRepeatTimer = null;
 
 // categorías fijas que ya tienes en la parte principal
 const BASE_CATEGORY_DEFS = [
@@ -347,20 +360,14 @@ function formatStars(card) {
 function getComments(card) {
   if (Array.isArray(card.comentarios) && card.comentarios.length) {
     return card.comentarios
-      .map((c) => {
-        if (typeof c === "string") return c;
-        return safeText(c?.comentario || c?.texto || c?.text);
-      })
+      .map((c) => safeText(c))
       .filter(Boolean)
       .slice(0, 3);
   }
 
   if (Array.isArray(card.comments) && card.comments.length) {
     return card.comments
-      .map((c) => {
-        if (typeof c === "string") return c;
-        return safeText(c?.comentario || c?.texto || c?.text);
-      })
+      .map((c) => safeText(c))
       .filter(Boolean)
       .slice(0, 3);
   }
@@ -401,6 +408,108 @@ function getSearchBlob(card) {
 }
 
 // ===============================
+// KM / UBICACIÓN
+// ===============================
+function getLatLng(card) {
+  const lat =
+    Number(card.lat) ||
+    Number(card.latitude) ||
+    Number(card.latitud) ||
+    Number(card.latitudActual) ||
+    Number(card?.ubicacion?.lat) ||
+    Number(card?.location?.lat) ||
+    Number(card?.coords?.lat);
+
+  const lng =
+    Number(card.lng) ||
+    Number(card.longitude) ||
+    Number(card.longitud) ||
+    Number(card.longitudActual) ||
+    Number(card?.ubicacion?.lng) ||
+    Number(card?.location?.lng) ||
+    Number(card?.coords?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function askForKm() {
+  const value = prompt("¿Cuántos kilómetros quieres buscar?");
+  if (value === null) return null;
+
+  const km = Number(String(value).replace(",", ".").trim());
+  if (!Number.isFinite(km) || km <= 0) {
+    alert("Ingresa una cantidad válida de kilómetros.");
+    return null;
+  }
+
+  return km;
+}
+
+function requestUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Este navegador no soporta geolocalización."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (error) => {
+        reject(error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
+
+async function handleKmSearch() {
+  const km = askForKm();
+  if (km == null) return;
+
+  try {
+    currentUserPosition = await requestUserLocation();
+    currentKmFilter = km;
+    applyFilters();
+  } catch (error) {
+    console.error("Error ubicación:", error);
+    alert("Debes permitir ubicación para buscar por kilómetros.");
+  }
+}
+
+function clearKmFilter() {
+  currentKmFilter = null;
+  applyFilters();
+}
+
+// ===============================
 // ACCIONES
 // ===============================
 function openMaps(address) {
@@ -428,7 +537,7 @@ function openWhatsapp(phone, name) {
     return;
   }
   const msg = encodeURIComponent(`Hola, vi tu tarjeta en TJD y me interesa tu negocio: ${name}`);
-  window.open(`https://wa.me/${clean}?text=${msg}`, "_blank");
+  window.open(`https://wa.me/${clean}?text=${msg}, "_blank")`;
 }
 
 function openWebsite(url) {
@@ -459,6 +568,349 @@ function closeModal(modal) {
   if (!modal) return;
   modal.classList.remove("show");
   document.body.style.overflow = "";
+}
+
+// ===============================
+// BANNER PUBLICIDAD GLOBAL
+// ===============================
+function removeBannerModal() {
+  const existing = document.getElementById("tjd-banner-modal");
+  if (existing) existing.remove();
+
+  if (bannerCloseTimer) {
+    clearTimeout(bannerCloseTimer);
+    bannerCloseTimer = null;
+  }
+}
+
+function showBannerModal(data) {
+  if (!data || data.activo !== true || !data.url) return;
+
+  removeBannerModal();
+
+  const modal = document.createElement("div");
+  modal.id = "tjd-banner-modal";
+  modal.style.position = "fixed";
+  modal.style.inset = "0";
+  modal.style.background = "rgba(0,0,0,0.78)";
+  modal.style.display = "flex";
+  modal.style.alignItems = "center";
+  modal.style.justifyContent = "center";
+  modal.style.padding = "16px";
+  modal.style.zIndex = "99999";
+
+  const wrap = document.createElement("div");
+  wrap.style.position = "relative";
+  wrap.style.width = "min(94vw, 850px)";
+  wrap.style.maxHeight = "90vh";
+  wrap.style.background = "#111";
+  wrap.style.borderRadius = "18px";
+  wrap.style.overflow = "hidden";
+  wrap.style.boxShadow = "0 20px 60px rgba(0,0,0,.35)";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.innerHTML = "✕";
+  closeBtn.style.position = "absolute";
+  closeBtn.style.top = "12px";
+  closeBtn.style.right = "12px";
+  closeBtn.style.width = "46px";
+  closeBtn.style.height = "46px";
+  closeBtn.style.borderRadius = "50%";
+  closeBtn.style.border = "none";
+  closeBtn.style.background = "rgba(0,0,0,.55)";
+  closeBtn.style.color = "#fff";
+  closeBtn.style.fontSize = "22px";
+  closeBtn.style.cursor = "pointer";
+  closeBtn.style.zIndex = "5";
+  closeBtn.onclick = removeBannerModal;
+
+  let mediaHtml = "";
+  if (safeText(data.tipo).toLowerCase() === "video") {
+    mediaHtml = `
+      <video
+        src="${escapeAttr(data.url)}"
+        autoplay
+        muted
+        controls
+        playsinline
+        style="width:100%; max-height:90vh; object-fit:contain; display:block; background:#000;"
+      ></video>
+    `;
+  } else {
+    mediaHtml = `
+      <img
+        src="${escapeAttr(data.url)}"
+        alt="Publicidad"
+        style="width:100%; max-height:90vh; object-fit:contain; display:block; background:#000;"
+      />
+    `;
+  }
+
+  wrap.innerHTML = mediaHtml;
+  wrap.appendChild(closeBtn);
+  modal.appendChild(wrap);
+  document.body.appendChild(modal);
+
+  const delay = Number(data.delaySeconds || 5);
+  if (delay > 0) {
+    bannerCloseTimer = setTimeout(() => {
+      removeBannerModal();
+    }, delay * 1000);
+  }
+}
+
+function setupBannerRealtime() {
+  if (bannerUnsub) bannerUnsub();
+
+  bannerUnsub = onSnapshot(doc(db, "publicidad", "bannerActivo"), (snap) => {
+    const data = snap.exists() ? snap.data() : null;
+
+    if (bannerRepeatTimer) {
+      clearInterval(bannerRepeatTimer);
+      bannerRepeatTimer = null;
+    }
+
+    if (!data || data.activo !== true || !data.url) {
+      removeBannerModal();
+      return;
+    }
+
+    showBannerModal(data);
+
+    const intervalMinutes = Number(data.intervalMinutes || 0);
+    if (intervalMinutes > 0) {
+      bannerRepeatTimer = setInterval(() => {
+        showBannerModal(data);
+      }, intervalMinutes * 60 * 1000);
+    }
+  });
+}
+
+// ===============================
+// COMENTARIOS Y RATINGS REALTIME
+// ===============================
+function updateCardLocal(cardId, patch) {
+  allBusinessCards = allBusinessCards.map((card) =>
+    card.id === cardId ? { ...card, ...patch } : card
+  );
+  applyFilters();
+}
+
+function setupCommentsListener(cardId) {
+  if (commentsUnsubs.has(cardId)) return;
+
+  const unsub = onSnapshot(collection(db, "cards", cardId, "comments"), (snapshot) => {
+    const comments = [];
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const text = safeText(data?.texto || data?.comentario || data?.text);
+      if (text) comments.push(text);
+    });
+
+    updateCardLocal(cardId, {
+      comments,
+      comentarios: comments,
+    });
+  });
+
+  commentsUnsubs.set(cardId, unsub);
+}
+
+function setupRatingsListener(cardId) {
+  if (ratingsUnsubs.has(cardId)) return;
+
+  const unsub = onSnapshot(collection(db, "cards", cardId, "ratings"), (snapshot) => {
+    const ratings = [];
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const value =
+        Number(data?.estrellas) ||
+        Number(data?.rating) ||
+        Number(data?.calificacion) ||
+        Number(data?.value) ||
+        0;
+
+      if (value > 0) ratings.push(value);
+    });
+
+    const average =
+      ratings.length > 0
+        ? ratings.reduce((acc, value) => acc + value, 0) / ratings.length
+        : 0;
+
+    updateCardLocal(cardId, {
+      promedioCalificacion: average,
+      rating: average,
+      calificacion: average,
+      totalRatings: ratings.length,
+    });
+  });
+
+  ratingsUnsubs.set(cardId, unsub);
+}
+
+function cleanupRemovedSubListeners(validIds) {
+  for (const [id, unsub] of commentsUnsubs.entries()) {
+    if (!validIds.has(id)) {
+      unsub();
+      commentsUnsubs.delete(id);
+    }
+  }
+
+  for (const [id, unsub] of ratingsUnsubs.entries()) {
+    if (!validIds.has(id)) {
+      unsub();
+      ratingsUnsubs.delete(id);
+    }
+  }
+}
+
+function setupCardSubcollectionsRealtime(cards) {
+  const validIds = new Set(cards.map((card) => card.id));
+
+  cards.forEach((card) => {
+    setupCommentsListener(card.id);
+    setupRatingsListener(card.id);
+  });
+
+  cleanupRemovedSubListeners(validIds);
+}
+
+// ===============================
+// WEB: CALIFICAR Y COMENTAR
+// ===============================
+async function refreshCardRatingAggregates(cardId) {
+  try {
+    const ratingsSnap = await getDocs(collection(db, "cards", cardId, "ratings"));
+    const values = [];
+
+    ratingsSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      const value =
+        Number(data?.estrellas) ||
+        Number(data?.rating) ||
+        Number(data?.calificacion) ||
+        Number(data?.value) ||
+        0;
+
+      if (value > 0) values.push(value);
+    });
+
+    const totalRatings = values.length;
+    const promedioCalificacion =
+      totalRatings > 0
+        ? values.reduce((acc, n) => acc + n, 0) / totalRatings
+        : 0;
+
+    await setDoc(
+      doc(db, "cards", cardId),
+      {
+        promedioCalificacion,
+        rating: promedioCalificacion,
+        calificacion: promedioCalificacion,
+        totalRatings,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error recalculando rating:", error);
+  }
+}
+
+async function submitRating(card) {
+  const value = prompt("Califica del 1 al 5");
+  if (value === null) return;
+
+  const estrellas = Number(String(value).trim());
+  if (!Number.isFinite(estrellas) || estrellas < 1 || estrellas > 5) {
+    alert("La calificación debe ser del 1 al 5.");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "cards", card.id, "ratings"), {
+      estrellas,
+      rating: estrellas,
+      fuente: "web",
+      createdAt: serverTimestamp(),
+    });
+
+    await refreshCardRatingAggregates(card.id);
+    alert("Calificación guardada correctamente.");
+  } catch (error) {
+    console.error("Error guardando rating:", error);
+    alert("No se pudo guardar la calificación.");
+  }
+}
+
+async function submitComment(card) {
+  const texto = prompt("Escribe tu comentario");
+  if (texto === null) return;
+
+  const clean = safeText(texto).trim();
+  if (!clean) {
+    alert("Escribe un comentario válido.");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "cards", card.id, "comments"), {
+      comentario: clean,
+      texto: clean,
+      text: clean,
+      fuente: "web",
+      nombreNegocio: getDisplayName(card),
+      createdAt: serverTimestamp(),
+    });
+
+    alert("Comentario guardado correctamente.");
+  } catch (error) {
+    console.error("Error guardando comentario:", error);
+    alert("No se pudo guardar el comentario.");
+  }
+}
+
+async function submitRatingAndComment(card) {
+  const value = prompt("Califica del 1 al 5");
+  if (value === null) return;
+
+  const estrellas = Number(String(value).trim());
+  if (!Number.isFinite(estrellas) || estrellas < 1 || estrellas > 5) {
+    alert("La calificación debe ser del 1 al 5.");
+    return;
+  }
+
+  const comentario = prompt("Escribe tu comentario (opcional)") || "";
+  const cleanComment = safeText(comentario).trim();
+
+  try {
+    await addDoc(collection(db, "cards", card.id, "ratings"), {
+      estrellas,
+      rating: estrellas,
+      fuente: "web",
+      createdAt: serverTimestamp(),
+    });
+
+    if (cleanComment) {
+      await addDoc(collection(db, "cards", card.id, "comments"), {
+        comentario: cleanComment,
+        texto: cleanComment,
+        text: cleanComment,
+        fuente: "web",
+        nombreNegocio: getDisplayName(card),
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    await refreshCardRatingAggregates(card.id);
+    alert("Tu opinión fue guardada correctamente.");
+  } catch (error) {
+    console.error("Error guardando opinión:", error);
+    alert("No se pudo guardar tu opinión.");
+  }
 }
 
 // ===============================
@@ -496,6 +948,17 @@ function renderCards(cards) {
 
     const videoUrl = getVideoUrl(card);
     const showVideo = Boolean(videoUrl && isVideoAuthorized(card));
+
+    const coords = getLatLng(card);
+    const distanceHtml =
+      currentUserPosition && coords
+        ? `
+        <div class="detail-line" style="color:#0b7a75; font-weight:700;">
+          <i class="fa-solid fa-location-crosshairs"></i>
+          <span>${distanceKm(currentUserPosition.lat, currentUserPosition.lng, coords.lat, coords.lng).toFixed(1)} km de tu ubicación</span>
+        </div>
+      `
+        : "";
 
     const mediaHtml = showVideo
       ? `
@@ -575,6 +1038,8 @@ function renderCards(cards) {
             : ""
         }
 
+        ${distanceHtml}
+
         ${
           schedule
             ? `
@@ -620,7 +1085,7 @@ function renderCards(cards) {
             <i class="fa-regular fa-comment-dots"></i>
             <div>
               ${comments
-                .map((comment) => `<div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>`)
+                .map((comment) => `<div style="margin-bottom:6px;">• ${escapeHtml(comment)`}</div>)
                 .join("")}
             </div>
           </div>
@@ -649,6 +1114,21 @@ function renderCards(cards) {
               <i class="fa-solid fa-globe"></i>
               Web
             </button>
+
+            <button class="footer-chip js-calificar" type="button">
+              <i class="fa-solid fa-star"></i>
+              Calificar
+            </button>
+
+            <button class="footer-chip js-comentar" type="button">
+              <i class="fa-regular fa-comment-dots"></i>
+              Comentar
+            </button>
+
+            <button class="footer-chip js-opinar" type="button">
+              <i class="fa-solid fa-pen"></i>
+              Opinar
+            </button>
           </div>
 
           <div class="footer-stars gold">${stars}</div>
@@ -660,6 +1140,9 @@ function renderCards(cards) {
     article.querySelector(".js-telefono")?.addEventListener("click", () => openPhone(phone));
     article.querySelector(".js-whatsapp")?.addEventListener("click", () => openWhatsapp(whatsapp, name));
     article.querySelector(".js-web")?.addEventListener("click", () => openWebsite(website));
+    article.querySelector(".js-calificar")?.addEventListener("click", () => submitRating(card));
+    article.querySelector(".js-comentar")?.addEventListener("click", () => submitComment(card));
+    article.querySelector(".js-opinar")?.addEventListener("click", () => submitRatingAndComment(card));
 
     cardsContainer.appendChild(article);
   });
@@ -681,6 +1164,22 @@ function applyFilters() {
 
   if (searchTerm) {
     filtered = filtered.filter((card) => getSearchBlob(card).includes(searchTerm));
+  }
+
+  if (currentKmFilter != null && currentUserPosition) {
+    filtered = filtered.filter((card) => {
+      const coords = getLatLng(card);
+      if (!coords) return false;
+
+      const km = distanceKm(
+        currentUserPosition.lat,
+        currentUserPosition.lng,
+        coords.lat,
+        coords.lng
+      );
+
+      return km <= currentKmFilter;
+    });
   }
 
   filtered.sort((a, b) => {
@@ -725,6 +1224,7 @@ function loadBusinessCards() {
 
       allBusinessCards = rows;
       renderMoreCategories(rows);
+      setupCardSubcollectionsRealtime(rows);
       applyFilters();
     });
   } catch (error) {
@@ -797,13 +1297,8 @@ btnGrid?.addEventListener("click", () => {
   moreCategoriesMenu?.classList.toggle("show");
 });
 
-btnKmTop?.addEventListener("click", () => {
-  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
-});
-
-btnKmBottom?.addEventListener("click", () => {
-  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
-});
+btnKmTop?.addEventListener("click", handleKmSearch);
+btnKmBottom?.addEventListener("click", handleKmSearch);
 
 btnDescargarApp?.addEventListener("click", () => {
   window.open("https://TU-ENLACE-ANDROID-AQUI.com", "_blank");
@@ -833,6 +1328,7 @@ window.addEventListener("keydown", (e) => {
     closeModal(privacyModal);
     closeModal(policiesModal);
     closeModal(disclaimerModal);
+    removeBannerModal();
   }
 });
 
@@ -843,8 +1339,10 @@ window.openMaps = openMaps;
 window.openPhone = openPhone;
 window.openWhatsapp = openWhatsapp;
 window.openWebsite = openWebsite;
+window.clearKmFilter = clearKmFilter;
 
 // ===============================
 // INIT
 // ===============================
+setupBannerRealtime();
 loadBusinessCards();
