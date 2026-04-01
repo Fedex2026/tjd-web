@@ -537,7 +537,7 @@ function openWhatsapp(phone, name) {
     return;
   }
   const msg = encodeURIComponent(`Hola, vi tu tarjeta en TJD y me interesa tu negocio: ${name}`);
-  window.open(`https://wa.me/${clean}?text=${msg}, "_blank")`;
+  window.open(`https://wa.me/${clean}?text=${msg}`, "_blank")`;
 }
 
 function openWebsite(url) {
