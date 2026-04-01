@@ -45,22 +45,24 @@ const disclaimerModal = document.getElementById("disclaimerModal");
 
 let allBusinessCards = [];
 let currentCategory = "todos";
-let currentKmFilter = null;
-let userLocation = null;
 
 // ===============================
-// HELPERS TEXTO
+// HELPERS
 // ===============================
 function safeText(value) {
   return value == null ? "" : String(value);
 }
 
-function normalizeText(value) {
-  return safeText(value)
-    .toLowerCase()
+function removeAccents(text) {
+  return safeText(text)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
     .trim();
+}
+
+function normalizeText(value) {
+  return removeAccents(value);
 }
 
 function escapeHtml(text) {
@@ -84,7 +86,7 @@ function escapeAttr(text) {
 // CATEGORÍAS
 // ===============================
 function getCategorySlug(card) {
-  const raw = normalizeText(card.categoria || card.category || "");
+  const raw = removeAccents(card.categoria || card.category || "");
 
   if (
     raw.includes("medic") ||
@@ -185,73 +187,15 @@ function getSchedule(card) {
   return safeText(card.horarios) || safeText(card.horario) || "";
 }
 
-function getOfferText(card) {
-  return safeText(card.ofertas || card.promoTexto || "");
-}
-
-function hasTrustSeal(card) {
-  return card.planActivo === true;
-}
-
-function getVideoUrl(card) {
-  return (
-    safeText(card.videoPublicidadUrl) ||
-    safeText(card.videoUrl) ||
-    safeText(card.videoPromoUrl) ||
-    ""
-  );
-}
-
-function isVideoAuthorized(card) {
-  if (card.videoPublicidadAutorizado === true) return true;
-  if (card.videoAutorizado === true) return true;
-  if (card.videoApproved === true) return true;
-  return false;
-}
-
-function getRatingNumber(card) {
+function formatStars(card) {
   const n =
     Number(card.promedioCalificacion) ||
     Number(card.rating) ||
     Number(card.calificacion) ||
-    Number(card.estrellas) ||
     0;
 
-  return Math.max(0, Math.min(5, n));
-}
-
-function formatStars(card) {
-  const rounded = Math.round(getRatingNumber(card));
+  const rounded = Math.max(0, Math.min(5, Math.round(n)));
   return "★".repeat(rounded) + "☆".repeat(5 - rounded);
-}
-
-function getComments(card) {
-  if (Array.isArray(card.comentarios) && card.comentarios.length) {
-    return card.comentarios
-      .map((c) => {
-        if (typeof c === "string") return c;
-        return safeText(c?.comentario || c?.texto || c?.text);
-      })
-      .filter(Boolean)
-      .slice(0, 2);
-  }
-
-  if (Array.isArray(card.comments) && card.comments.length) {
-    return card.comments
-      .map((c) => {
-        if (typeof c === "string") return c;
-        return safeText(c?.comentario || c?.texto || c?.text);
-      })
-      .filter(Boolean)
-      .slice(0, 2);
-  }
-
-  if (card.calificacion && typeof card.calificacion === "object") {
-    const singleComment = safeText(card.calificacion.comentario);
-    return singleComment ? [singleComment] : [];
-  }
-
-  return [];
 }
 
 function getSearchBlob(card) {
@@ -276,106 +220,6 @@ function getSearchBlob(card) {
   ]
     .map((v) => normalizeText(v))
     .join(" ");
-}
-
-// ===============================
-// GEOLOCALIZACIÓN
-// ===============================
-function getLatLng(card) {
-  const lat =
-    Number(card.lat) ||
-    Number(card.latitude) ||
-    Number(card.latitud) ||
-    Number(card?.ubicacion?.lat) ||
-    Number(card?.location?.lat) ||
-    Number(card?.coords?.lat);
-
-  const lng =
-    Number(card.lng) ||
-    Number(card.longitude) ||
-    Number(card.longitud) ||
-    Number(card?.ubicacion?.lng) ||
-    Number(card?.location?.lng) ||
-    Number(card?.coords?.lng);
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng };
-}
-
-function distanceKm(lat1, lon1, lat2, lon2) {
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const R = 6371;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function askForKm() {
-  const value = prompt("¿Cuántos kilómetros quieres buscar?");
-  if (value === null) return null;
-
-  const km = Number(String(value).replace(",", ".").trim());
-  if (!Number.isFinite(km) || km <= 0) {
-    alert("Ingresa una cantidad válida de kilómetros.");
-    return null;
-  }
-
-  return km;
-}
-
-function getUserLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Tu navegador no soporta ubicación."));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-      },
-      () => {
-        reject(new Error("No se pudo obtener tu ubicación."));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      }
-    );
-  });
-}
-
-async function applyKmFilter() {
-  const km = askForKm();
-  if (km == null) return;
-
-  try {
-    userLocation = await getUserLocation();
-    currentKmFilter = km;
-    applyFilters();
-  } catch (error) {
-    console.error(error);
-    alert("No se pudo obtener tu ubicación para buscar por km.");
-  }
-}
-
-function clearKmFilter() {
-  currentKmFilter = null;
-  applyFilters();
 }
 
 // ===============================
@@ -465,65 +309,23 @@ function renderCards(cards) {
     const website = getWebsite(card);
     const schedule = getSchedule(card);
     const stars = formatStars(card);
-    const ratingValue = getRatingNumber(card);
-    const offerText = getOfferText(card);
-    const trustSeal = hasTrustSeal(card);
-    const comments = getComments(card);
-
-    const videoUrl = getVideoUrl(card);
-    const showVideo = Boolean(videoUrl && isVideoAuthorized(card));
-
-    let kmText = "";
-    const coords = getLatLng(card);
-    if (userLocation && coords) {
-      const km = distanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
-      kmText = ${km.toFixed(1)} km;
-    }
-
-    const mediaHtml = showVideo
-      ? `
-        <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
-          <video
-            src="${escapeAttr(videoUrl)}"
-            controls
-            muted
-            playsinline
-            preload="metadata"
-            style="width:100%; height:100%; object-fit:cover; display:block; background:#000;"
-          ></video>
-        </div>
-      `
-      : `
-        <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
-          <img
-            src="${escapeAttr(image)}"
-            alt="${escapeAttr(name)}"
-            style="width:100%; height:100%; object-fit:cover; display:block;"
-            onerror="this.src='logotjd.png';"
-          />
-        </div>
-      `;
 
     const article = document.createElement("article");
     article.className = "business-card promo-card";
     article.dataset.category = categorySlug;
 
     article.innerHTML = `
-      ${mediaHtml}
+      <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
+        <img
+          src="${escapeAttr(image)}"
+          alt="${escapeAttr(name)}"
+          style="width:100%; height:100%; object-fit:cover; display:block;"
+          onerror="this.src='logotjd.png';"
+        />
+      </div>
 
       <div class="promo-info">
         <h3>${escapeHtml(name)}</h3>
-
-        ${
-          trustSeal
-            ? `
-          <div class="detail-line" style="color:#2e9d57; font-weight:800;">
-            <i class="fa-solid fa-shield-heart"></i>
-            <span>Sello de confianza</span>
-          </div>
-        `
-            : ""
-        }
 
         ${
           address
@@ -553,51 +355,6 @@ function renderCards(cards) {
           <div class="detail-line whatsapp-line">
             <i class="fa-brands fa-whatsapp"></i>
             <span>${escapeHtml(whatsapp)}</span>
-          </div>
-        `
-            : ""
-        }
-
-        ${
-          offerText
-            ? `
-          <div class="detail-line" style="color:#7a3cff; font-weight:700;">
-            <i class="fa-solid fa-tag"></i>
-            <span>Oferta: ${escapeHtml(offerText)}</span>
-          </div>
-        `
-            : ""
-        }
-
-        ${
-          kmText
-            ? `
-          <div class="detail-line" style="color:#008b8b; font-weight:700;">
-            <i class="fa-solid fa-location-crosshairs"></i>
-            <span>${escapeHtml(kmText)} de tu ubicación</span>
-          </div>
-        `
-            : ""
-        }
-
-        <div class="detail-line">
-          <i class="fa-solid fa-star"></i>
-          <span>Calificación: ${escapeHtml(stars)} (${ratingValue.toFixed(1)})</span>
-        </div>
-
-        ${
-          comments.length
-            ? `
-          <div class="detail-line" style="align-items:flex-start;">
-            <i class="fa-regular fa-comment-dots"></i>
-            <div>
-              ${comments
-                .map(
-                  (comment) =>
-                    <div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>
-                )
-                .join("")}
-            </div>
           </div>
         `
             : ""
@@ -654,16 +411,6 @@ function applyFilters() {
 
   if (searchTerm) {
     filtered = filtered.filter((card) => getSearchBlob(card).includes(searchTerm));
-  }
-
-  if (currentKmFilter != null && userLocation) {
-    filtered = filtered.filter((card) => {
-      const coords = getLatLng(card);
-      if (!coords) return false;
-
-      const km = distanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
-      return km <= currentKmFilter;
-    });
   }
 
   filtered.sort((a, b) => {
@@ -754,8 +501,13 @@ btnGrid?.addEventListener("click", () => {
   moreCategoriesMenu?.classList.toggle("show");
 });
 
-btnKmTop?.addEventListener("click", applyKmFilter);
-btnKmBottom?.addEventListener("click", applyKmFilter);
+btnKmTop?.addEventListener("click", () => {
+  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
+});
+
+btnKmBottom?.addEventListener("click", () => {
+  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
+});
 
 btnSubirTarjeta?.addEventListener("click", () => {
   window.open("https://TU-ENLACE-REAL-AQUI.com", "_blank");
@@ -799,7 +551,6 @@ window.openMaps = openMaps;
 window.openPhone = openPhone;
 window.openWhatsapp = openWhatsapp;
 window.openWebsite = openWebsite;
-window.clearKmFilter = clearKmFilter;
 
 // ===============================
 // INIT
