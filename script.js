@@ -45,9 +45,11 @@ const disclaimerModal = document.getElementById("disclaimerModal");
 
 let allBusinessCards = [];
 let currentCategory = "todos";
+let currentKmFilter = null;
+let currentUserPosition = null;
 
 // ===============================
-// HELPERS
+// HELPERS BASE
 // ===============================
 function safeText(value) {
   return value == null ? "" : String(value);
@@ -83,16 +85,18 @@ function escapeAttr(text) {
 }
 
 // ===============================
-// CATEGORÍAS
+// CATEGORÍAS COMPLETAS
 // ===============================
 function getCategorySlug(card) {
-  const raw = removeAccents(card.categoria || card.category || "");
+  const raw = normalizeText(card.categoria || card.category || "");
 
   if (
     raw.includes("medic") ||
     raw.includes("doctor") ||
     raw.includes("clinica") ||
-    raw.includes("hospital")
+    raw.includes("hospital") ||
+    raw.includes("dentista") ||
+    raw.includes("odont")
   ) return "medicos";
 
   if (
@@ -103,7 +107,8 @@ function getCategorySlug(card) {
 
   if (
     raw.includes("taller") ||
-    raw.includes("mecanico")
+    raw.includes("mecanico") ||
+    raw.includes("mecanica")
   ) return "talleres";
 
   if (raw.includes("panader")) return "panaderias";
@@ -112,7 +117,9 @@ function getCategorySlug(card) {
     raw.includes("restaurant") ||
     raw.includes("comida") ||
     raw.includes("taquer") ||
-    raw.includes("cafeter")
+    raw.includes("cafeter") ||
+    raw.includes("pizza") ||
+    raw.includes("hamburguesa")
   ) return "restaurantes";
 
   if (raw.includes("refaccion")) return "refaccionarias";
@@ -125,18 +132,43 @@ function getCategorySlug(card) {
   if (
     raw.includes("grua") ||
     raw.includes("remolque") ||
-    raw.includes("arrastre")
+    raw.includes("arrastre") ||
+    raw.includes("plataforma")
   ) return "gruas";
 
   if (raw.includes("autolav")) return "autolavados";
-  if (raw.includes("ropa") || raw.includes("accesorio") || raw.includes("fashion")) return "ropa";
+
+  if (
+    raw.includes("ropa") ||
+    raw.includes("accesorio") ||
+    raw.includes("fashion") ||
+    raw.includes("boutique") ||
+    raw.includes("moda")
+  ) return "ropa";
+
   if (raw.includes("podolog")) return "podologos";
+
+  if (
+    raw.includes("mecanico") ||
+    raw.includes("mecanica")
+  ) return "mecanicos";
+
+  if (raw.includes("ferreter")) return "ferreterias";
+  if (raw.includes("vulcan")) return "vulcanizadoras";
+  if (raw.includes("cerraj")) return "cerrajerias";
+  if (raw.includes("plomer")) return "plomeros";
+  if (raw.includes("barber") || raw.includes("estetica") || raw.includes("belleza")) return "belleza";
+  if (raw.includes("veterin")) return "veterinarias";
+  if (raw.includes("farmac")) return "farmacias";
+  if (raw.includes("mudanza")) return "mudanzas";
+  if (raw.includes("hotel")) return "hoteles";
+  if (raw.includes("gimnas")) return "gimnasios";
 
   return "otros";
 }
 
 // ===============================
-// DATOS TARJETA
+// EXTRACCIÓN DE DATOS
 // ===============================
 function getCardImage(card) {
   return (
@@ -187,15 +219,85 @@ function getSchedule(card) {
   return safeText(card.horarios) || safeText(card.horario) || "";
 }
 
-function formatStars(card) {
+function getOfferText(card) {
+  return safeText(card.ofertas || card.promoTexto || card.promocion || "");
+}
+
+function hasTrustSeal(card) {
+  return card.planActivo === true || card.selloConfianza === true || card.trustSeal === true;
+}
+
+function isFeatured(card) {
+  return card.destacado === true || card.publicidadLocal === true || card.featured === true;
+}
+
+function getFeaturedOrder(card) {
+  return Number(card.destacadoOrden || card.privilegioOrden || card.posicionPrivilegio || 9999);
+}
+
+function getVideoUrl(card) {
+  return (
+    safeText(card.videoPublicidadUrl) ||
+    safeText(card.videoUrl) ||
+    safeText(card.videoPromoUrl) ||
+    safeText(card.video) ||
+    ""
+  );
+}
+
+function isVideoAuthorized(card) {
+  return (
+    card.videoPublicidadAutorizado === true ||
+    card.videoAutorizado === true ||
+    card.videoApproved === true ||
+    card.videoVisible === true
+  );
+}
+
+function getRatingNumber(card) {
   const n =
     Number(card.promedioCalificacion) ||
     Number(card.rating) ||
     Number(card.calificacion) ||
+    Number(card.estrellas) ||
+    Number(card.promedio) ||
     0;
 
-  const rounded = Math.max(0, Math.min(5, Math.round(n)));
+  return Math.max(0, Math.min(5, n));
+}
+
+function formatStars(card) {
+  const rounded = Math.round(getRatingNumber(card));
   return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+}
+
+function getComments(card) {
+  if (Array.isArray(card.comentarios) && card.comentarios.length) {
+    return card.comentarios
+      .map((c) => {
+        if (typeof c === "string") return c;
+        return safeText(c?.comentario || c?.texto || c?.text);
+      })
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  if (Array.isArray(card.comments) && card.comments.length) {
+    return card.comments
+      .map((c) => {
+        if (typeof c === "string") return c;
+        return safeText(c?.comentario || c?.texto || c?.text);
+      })
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  if (card.calificacion && typeof card.calificacion === "object") {
+    const singleComment = safeText(card.calificacion.comentario);
+    return singleComment ? [singleComment] : [];
+  }
+
+  return [];
 }
 
 function getSearchBlob(card) {
@@ -213,13 +315,116 @@ function getSearchBlob(card) {
     card.sitioWeb,
     card.ofertas,
     card.promoTexto,
+    card.promocion,
     card.inventarioKeywords,
     card.serviciosKeywords,
     card.descripcion,
     card.tipoServicio,
+    card.subcategoria,
+    card.subCategory,
   ]
     .map((v) => normalizeText(v))
     .join(" ");
+}
+
+// ===============================
+// GEOLOCALIZACIÓN / KM
+// ===============================
+function getLatLng(card) {
+  const lat =
+    Number(card.lat) ||
+    Number(card.latitude) ||
+    Number(card.latitud) ||
+    Number(card?.ubicacion?.lat) ||
+    Number(card?.location?.lat) ||
+    Number(card?.coords?.lat);
+
+  const lng =
+    Number(card.lng) ||
+    Number(card.longitude) ||
+    Number(card.longitud) ||
+    Number(card?.ubicacion?.lng) ||
+    Number(card?.location?.lng) ||
+    Number(card?.coords?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function askForKm() {
+  const value = prompt("¿Cuántos kilómetros quieres buscar?");
+  if (value === null) return null;
+
+  const km = Number(String(value).replace(",", ".").trim());
+  if (!Number.isFinite(km) || km <= 0) {
+    alert("Ingresa una cantidad válida de kilómetros.");
+    return null;
+  }
+
+  return km;
+}
+
+function requestUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Este navegador no soporta geolocalización."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (error) => {
+        reject(error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
+
+async function handleKmSearch() {
+  const km = askForKm();
+  if (km == null) return;
+
+  try {
+    currentUserPosition = await requestUserLocation();
+    currentKmFilter = km;
+    applyFilters();
+  } catch (error) {
+    console.error("Error ubicación:", error);
+    alert("Debes permitir ubicación para buscar por kilómetros.");
+  }
+}
+
+function clearKmFilter() {
+  currentKmFilter = null;
+  applyFilters();
 }
 
 // ===============================
@@ -263,7 +468,7 @@ function openWebsite(url) {
   const finalUrl =
     raw.startsWith("http://") || raw.startsWith("https://")
       ? raw
-      : `https://${raw}`;
+      : https://${raw};
 
   window.open(finalUrl, "_blank");
 }
@@ -284,7 +489,7 @@ function closeModal(modal) {
 }
 
 // ===============================
-// RENDER
+// RENDER TARJETAS
 // ===============================
 function renderCards(cards) {
   cardsContainer.innerHTML = "";
@@ -309,23 +514,88 @@ function renderCards(cards) {
     const website = getWebsite(card);
     const schedule = getSchedule(card);
     const stars = formatStars(card);
+    const ratingValue = getRatingNumber(card);
+    const offerText = getOfferText(card);
+    const trustSeal = hasTrustSeal(card);
+    const featured = isFeatured(card);
+    const featuredOrder = getFeaturedOrder(card);
+    const comments = getComments(card);
+
+    const videoUrl = getVideoUrl(card);
+    const showVideo = Boolean(videoUrl && isVideoAuthorized(card));
+
+    let kmHtml = "";
+    const coords = getLatLng(card);
+    if (currentUserPosition && coords) {
+      const km = distanceKm(
+        currentUserPosition.lat,
+        currentUserPosition.lng,
+        coords.lat,
+        coords.lng
+      );
+      kmHtml = `
+        <div class="detail-line" style="color:#008b8b; font-weight:700;">
+          <i class="fa-solid fa-location-crosshairs"></i>
+          <span>${escapeHtml(km.toFixed(1))} km de tu ubicación</span>
+        </div>
+      `;
+    }
+
+    const mediaHtml = showVideo
+      ? `
+        <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
+          <video
+            src="${escapeAttr(videoUrl)}"
+            controls
+            muted
+            playsinline
+            preload="metadata"
+            style="width:100%; height:100%; object-fit:cover; display:block; background:#000;"
+          ></video>
+        </div>
+      `
+      : `
+        <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
+          <img
+            src="${escapeAttr(image)}"
+            alt="${escapeAttr(name)}"
+            style="width:100%; height:100%; object-fit:cover; display:block;"
+            onerror="this.src='logotjd.png';"
+          />
+        </div>
+      `;
 
     const article = document.createElement("article");
     article.className = "business-card promo-card";
     article.dataset.category = categorySlug;
 
     article.innerHTML = `
-      <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
-        <img
-          src="${escapeAttr(image)}"
-          alt="${escapeAttr(name)}"
-          style="width:100%; height:100%; object-fit:cover; display:block;"
-          onerror="this.src='logotjd.png';"
-        />
-      </div>
+      ${mediaHtml}
 
       <div class="promo-info">
         <h3>${escapeHtml(name)}</h3>
+
+        ${
+          trustSeal
+            ? `
+          <div class="detail-line" style="color:#2e9d57; font-weight:800;">
+            <i class="fa-solid fa-shield-heart"></i>
+            <span>Sello de confianza</span>
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          featured
+            ? `
+          <div class="detail-line" style="color:#b36b00; font-weight:800;">
+            <i class="fa-solid fa-crown"></i>
+            <span>Posición privilegiada${featuredOrder !== 9999 ? ` #${featuredOrder}` : ""}</span>
+          </div>
+        `
+            : ""
+        }
 
         ${
           address
@@ -355,6 +625,42 @@ function renderCards(cards) {
           <div class="detail-line whatsapp-line">
             <i class="fa-brands fa-whatsapp"></i>
             <span>${escapeHtml(whatsapp)}</span>
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          offerText
+            ? `
+          <div class="detail-line" style="color:#7a3cff; font-weight:700;">
+            <i class="fa-solid fa-tag"></i>
+            <span>Oferta: ${escapeHtml(offerText)}</span>
+          </div>
+        `
+            : ""
+        }
+
+        ${kmHtml}
+
+        <div class="detail-line">
+          <i class="fa-solid fa-star"></i>
+          <span>Calificación: ${escapeHtml(stars)} (${ratingValue.toFixed(1)})</span>
+        </div>
+
+        ${
+          comments.length
+            ? `
+          <div class="detail-line" style="align-items:flex-start;">
+            <i class="fa-regular fa-comment-dots"></i>
+            <div>
+              ${comments
+                .map(
+                  (comment) =>
+                    <div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>
+                )
+                .join("")}
+            </div>
           </div>
         `
             : ""
@@ -413,14 +719,30 @@ function applyFilters() {
     filtered = filtered.filter((card) => getSearchBlob(card).includes(searchTerm));
   }
 
+  if (currentKmFilter != null && currentUserPosition) {
+    filtered = filtered.filter((card) => {
+      const coords = getLatLng(card);
+      if (!coords) return false;
+
+      const km = distanceKm(
+        currentUserPosition.lat,
+        currentUserPosition.lng,
+        coords.lat,
+        coords.lng
+      );
+
+      return km <= currentKmFilter;
+    });
+  }
+
   filtered.sort((a, b) => {
-    const aDestacado = a.destacado === true ? 1 : 0;
-    const bDestacado = b.destacado === true ? 1 : 0;
+    const aDestacado = isFeatured(a) ? 1 : 0;
+    const bDestacado = isFeatured(b) ? 1 : 0;
 
     if (aDestacado !== bDestacado) return bDestacado - aDestacado;
 
-    const aOrden = Number(a.destacadoOrden || 9999);
-    const bOrden = Number(b.destacadoOrden || 9999);
+    const aOrden = getFeaturedOrder(a);
+    const bOrden = getFeaturedOrder(b);
 
     if (aOrden !== bOrden) return aOrden - bOrden;
 
@@ -431,7 +753,7 @@ function applyFilters() {
 }
 
 // ===============================
-// FIREBASE REALTIME
+// FIREBASE TIEMPO REAL
 // ===============================
 function loadBusinessCards() {
   try {
@@ -501,13 +823,8 @@ btnGrid?.addEventListener("click", () => {
   moreCategoriesMenu?.classList.toggle("show");
 });
 
-btnKmTop?.addEventListener("click", () => {
-  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
-});
-
-btnKmBottom?.addEventListener("click", () => {
-  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
-});
+btnKmTop?.addEventListener("click", handleKmSearch);
+btnKmBottom?.addEventListener("click", handleKmSearch);
 
 btnSubirTarjeta?.addEventListener("click", () => {
   window.open("https://TU-ENLACE-REAL-AQUI.com", "_blank");
@@ -551,8 +868,9 @@ window.openMaps = openMaps;
 window.openPhone = openPhone;
 window.openWhatsapp = openWhatsapp;
 window.openWebsite = openWebsite;
+window.clearKmFilter = clearKmFilter;
 
 // ===============================
-// INIT
+// INICIO
 // ===============================
 loadBusinessCards();
