@@ -657,7 +657,7 @@ function renderCards(cards) {
               ${comments
                 .map(
                   (comment) =>
-                    <div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>
+                    `<div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>`
                 )
                 .join("")}
             </div>
