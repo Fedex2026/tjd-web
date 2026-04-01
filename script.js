@@ -31,7 +31,6 @@ const btnMas = document.getElementById("btnMas");
 const btnGrid = document.getElementById("btnGrid");
 
 const moreCategoriesMenu = document.getElementById("moreCategoriesMenu");
-const moreCategoryItems = document.querySelectorAll(".more-category-item");
 
 const btnAvisoTop = document.getElementById("btnAvisoTop");
 const btnPoliticasTop = document.getElementById("btnPoliticasTop");
@@ -43,28 +42,67 @@ const privacyModal = document.getElementById("privacyModal");
 const policiesModal = document.getElementById("policiesModal");
 const disclaimerModal = document.getElementById("disclaimerModal");
 
+// ===============================
+// CONTACTO TARJETERO
+// ===============================
+const TARJETERO_WHATSAPP = "5215512345678"; // CAMBIA ESTE NÚMERO
+const TARJETERO_EMAIL = "ventas@tarjeterodigitaltjd.com"; // CAMBIA ESTE CORREO
+
 let allBusinessCards = [];
 let currentCategory = "todos";
-let currentKmFilter = null;
-let currentUserPosition = null;
+
+// categorías fijas que ya tienes en la parte principal
+const BASE_CATEGORY_DEFS = [
+  {
+    slug: "medicos",
+    match: ["medico", "medicos", "doctor", "doctores", "clinica", "clinicas", "hospital", "hospitales", "dentista", "dentistas", "odontologia", "odontologo"],
+  },
+  {
+    slug: "seguros",
+    match: ["seguro", "seguros", "aseguradora", "aseguradoras", "aseguranza"],
+  },
+  {
+    slug: "talleres",
+    match: ["taller", "talleres"],
+  },
+  {
+    slug: "panaderias",
+    match: ["panaderia", "panaderias", "pan", "pasteleria", "pastelerias"],
+  },
+  {
+    slug: "restaurantes",
+    match: ["restaurante", "restaurantes", "comida", "taqueria", "taquerias", "cafeteria", "cafeterias"],
+  },
+];
+
+const MORE_CATEGORY_COLORS = [
+  { bg: "#5e60ff", color: "#fff" },
+  { bg: "#00bcd4", color: "#fff" },
+  { bg: "#ff4fa7", color: "#fff" },
+  { bg: "#7c4dff", color: "#fff" },
+  { bg: "#ff7a59", color: "#fff" },
+  { bg: "#3f51b5", color: "#fff" },
+  { bg: "#00c853", color: "#fff" },
+  { bg: "#00a8ff", color: "#fff" },
+  { bg: "#8e44ad", color: "#fff" },
+  { bg: "#ff3f9d", color: "#fff" },
+  { bg: "#43bfff", color: "#fff" },
+  { bg: "#ef5350", color: "#fff" },
+];
 
 // ===============================
-// HELPERS BASE
+// HELPERS
 // ===============================
 function safeText(value) {
   return value == null ? "" : String(value);
 }
 
-function removeAccents(text) {
-  return safeText(text)
+function normalizeText(value) {
+  return safeText(value)
+    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
     .trim();
-}
-
-function normalizeText(value) {
-  return removeAccents(value);
 }
 
 function escapeHtml(text) {
@@ -84,91 +122,129 @@ function escapeAttr(text) {
     .replaceAll(">", "&gt;");
 }
 
-// ===============================
-// CATEGORÍAS COMPLETAS
-// ===============================
-function getCategorySlug(card) {
-  const raw = normalizeText(card.categoria || card.category || "");
-
-  if (
-    raw.includes("medic") ||
-    raw.includes("doctor") ||
-    raw.includes("clinica") ||
-    raw.includes("hospital") ||
-    raw.includes("dentista") ||
-    raw.includes("odont")
-  ) return "medicos";
-
-  if (
-    raw.includes("segur") ||
-    raw.includes("aseguranza") ||
-    raw.includes("fianza")
-  ) return "seguros";
-
-  if (
-    raw.includes("taller") ||
-    raw.includes("mecanico") ||
-    raw.includes("mecanica")
-  ) return "talleres";
-
-  if (raw.includes("panader")) return "panaderias";
-
-  if (
-    raw.includes("restaurant") ||
-    raw.includes("comida") ||
-    raw.includes("taquer") ||
-    raw.includes("cafeter") ||
-    raw.includes("pizza") ||
-    raw.includes("hamburguesa")
-  ) return "restaurantes";
-
-  if (raw.includes("refaccion")) return "refaccionarias";
-  if (raw.includes("electric")) return "electricistas";
-  if (raw.includes("abogad")) return "abogados";
-  if (raw.includes("radiador")) return "radiadores";
-  if (raw.includes("hojalat") || raw.includes("pintura")) return "hojalateria";
-  if (raw.includes("llanta")) return "llantas";
-
-  if (
-    raw.includes("grua") ||
-    raw.includes("remolque") ||
-    raw.includes("arrastre") ||
-    raw.includes("plataforma")
-  ) return "gruas";
-
-  if (raw.includes("autolav")) return "autolavados";
-
-  if (
-    raw.includes("ropa") ||
-    raw.includes("accesorio") ||
-    raw.includes("fashion") ||
-    raw.includes("boutique") ||
-    raw.includes("moda")
-  ) return "ropa";
-
-  if (raw.includes("podolog")) return "podologos";
-
-  if (
-    raw.includes("mecanico") ||
-    raw.includes("mecanica")
-  ) return "mecanicos";
-
-  if (raw.includes("ferreter")) return "ferreterias";
-  if (raw.includes("vulcan")) return "vulcanizadoras";
-  if (raw.includes("cerraj")) return "cerrajerias";
-  if (raw.includes("plomer")) return "plomeros";
-  if (raw.includes("barber") || raw.includes("estetica") || raw.includes("belleza")) return "belleza";
-  if (raw.includes("veterin")) return "veterinarias";
-  if (raw.includes("farmac")) return "farmacias";
-  if (raw.includes("mudanza")) return "mudanzas";
-  if (raw.includes("hotel")) return "hoteles";
-  if (raw.includes("gimnas")) return "gimnasios";
-
-  return "otros";
+function titleCaseCategory(text) {
+  const raw = safeText(text).trim();
+  if (!raw) return "";
+  return raw
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 // ===============================
-// EXTRACCIÓN DE DATOS
+// CATEGORÍAS REALES
+// ===============================
+function getRawCategory(card) {
+  return safeText(card.categoria || card.category || "").trim();
+}
+
+function getNormalizedCategory(card) {
+  return normalizeText(getRawCategory(card));
+}
+
+function getBaseCategorySlugFromNormalized(normalizedCategory) {
+  if (!normalizedCategory) return null;
+
+  for (const def of BASE_CATEGORY_DEFS) {
+    for (const word of def.match) {
+      if (normalizedCategory.includes(word)) {
+        return def.slug;
+      }
+    }
+  }
+
+  return null;
+}
+
+function getCardFilterKey(card) {
+  const normalizedCategory = getNormalizedCategory(card);
+  const baseSlug = getBaseCategorySlugFromNormalized(normalizedCategory);
+
+  if (baseSlug) return baseSlug;
+  if (normalizedCategory) return real:${normalizedCategory};
+  return "real:otros";
+}
+
+function getRealExtraCategories(cards) {
+  const extrasMap = new Map();
+
+  cards.forEach((card) => {
+    const raw = getRawCategory(card);
+    const normalized = normalizeText(raw);
+    if (!normalized) return;
+
+    const baseSlug = getBaseCategorySlugFromNormalized(normalized);
+    if (baseSlug) return;
+
+    if (!extrasMap.has(normalized)) {
+      extrasMap.set(normalized, raw);
+    }
+  });
+
+  return Array.from(extrasMap.entries())
+    .map(([normalized, raw]) => ({
+      normalized,
+      label: titleCaseCategory(raw || normalized),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "es"));
+}
+
+function renderMoreCategories(cards) {
+  if (!moreCategoriesMenu) return;
+
+  const extraCategories = getRealExtraCategories(cards);
+
+  if (!extraCategories.length) {
+    moreCategoriesMenu.innerHTML = `
+      <div style="padding:12px 14px; color:#6f6985; font-weight:600;">
+        No hay más categorías registradas.
+      </div>
+    `;
+    return;
+  }
+
+  moreCategoriesMenu.innerHTML = `
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      ${extraCategories
+        .map((item, index) => {
+          const color = MORE_CATEGORY_COLORS[index % MORE_CATEGORY_COLORS.length];
+          return `
+            <button
+              type="button"
+              class="more-category-real-item"
+              data-category="real:${escapeAttr(item.normalized)}"
+              style="
+                border:none;
+                border-radius:14px;
+                padding:12px 16px;
+                font-size:1rem;
+                font-weight:800;
+                cursor:pointer;
+                background:${color.bg};
+                color:${color.color};
+                box-shadow:0 8px 18px rgba(57,36,93,0.10);
+              "
+            >
+              ${escapeHtml(item.label)}
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  moreCategoriesMenu.querySelectorAll(".more-category-real-item").forEach((button) => {
+    button.addEventListener("click", () => {
+      chips.forEach((chip) => chip.classList.remove("active"));
+      currentCategory = button.dataset.category || "todos";
+      moreCategoriesMenu.classList.remove("show");
+      applyFilters();
+    });
+  });
+}
+
+// ===============================
+// DATOS TARJETA
 // ===============================
 function getCardImage(card) {
   return (
@@ -224,11 +300,11 @@ function getOfferText(card) {
 }
 
 function hasTrustSeal(card) {
-  return card.planActivo === true || card.selloConfianza === true || card.trustSeal === true;
+  return card.planActivo === true || card.selloConfianza === true;
 }
 
 function isFeatured(card) {
-  return card.destacado === true || card.publicidadLocal === true || card.featured === true;
+  return card.destacado === true || card.publicidadLocal === true;
 }
 
 function getFeaturedOrder(card) {
@@ -240,7 +316,6 @@ function getVideoUrl(card) {
     safeText(card.videoPublicidadUrl) ||
     safeText(card.videoUrl) ||
     safeText(card.videoPromoUrl) ||
-    safeText(card.video) ||
     ""
   );
 }
@@ -249,8 +324,7 @@ function isVideoAuthorized(card) {
   return (
     card.videoPublicidadAutorizado === true ||
     card.videoAutorizado === true ||
-    card.videoApproved === true ||
-    card.videoVisible === true
+    card.videoApproved === true
   );
 }
 
@@ -260,7 +334,6 @@ function getRatingNumber(card) {
     Number(card.rating) ||
     Number(card.calificacion) ||
     Number(card.estrellas) ||
-    Number(card.promedio) ||
     0;
 
   return Math.max(0, Math.min(5, n));
@@ -325,106 +398,6 @@ function getSearchBlob(card) {
   ]
     .map((v) => normalizeText(v))
     .join(" ");
-}
-
-// ===============================
-// GEOLOCALIZACIÓN / KM
-// ===============================
-function getLatLng(card) {
-  const lat =
-    Number(card.lat) ||
-    Number(card.latitude) ||
-    Number(card.latitud) ||
-    Number(card?.ubicacion?.lat) ||
-    Number(card?.location?.lat) ||
-    Number(card?.coords?.lat);
-
-  const lng =
-    Number(card.lng) ||
-    Number(card.longitude) ||
-    Number(card.longitud) ||
-    Number(card?.ubicacion?.lng) ||
-    Number(card?.location?.lng) ||
-    Number(card?.coords?.lng);
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng };
-}
-
-function distanceKm(lat1, lon1, lat2, lon2) {
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const R = 6371;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function askForKm() {
-  const value = prompt("¿Cuántos kilómetros quieres buscar?");
-  if (value === null) return null;
-
-  const km = Number(String(value).replace(",", ".").trim());
-  if (!Number.isFinite(km) || km <= 0) {
-    alert("Ingresa una cantidad válida de kilómetros.");
-    return null;
-  }
-
-  return km;
-}
-
-function requestUserLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Este navegador no soporta geolocalización."));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-      },
-      (error) => {
-        reject(error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      }
-    );
-  });
-}
-
-async function handleKmSearch() {
-  const km = askForKm();
-  if (km == null) return;
-
-  try {
-    currentUserPosition = await requestUserLocation();
-    currentKmFilter = km;
-    applyFilters();
-  } catch (error) {
-    console.error("Error ubicación:", error);
-    alert("Debes permitir ubicación para buscar por kilómetros.");
-  }
-}
-
-function clearKmFilter() {
-  currentKmFilter = null;
-  applyFilters();
 }
 
 // ===============================
@@ -505,41 +478,24 @@ function renderCards(cards) {
   }
 
   cards.forEach((card) => {
-    const name = getDisplayName(card);
-    const categorySlug = getCategorySlug(card);
     const image = getCardImage(card);
+    const name = getDisplayName(card);
     const address = getAddress(card);
     const phone = getPhone(card);
     const whatsapp = getWhatsapp(card);
     const website = getWebsite(card);
     const schedule = getSchedule(card);
-    const stars = formatStars(card);
-    const ratingValue = getRatingNumber(card);
     const offerText = getOfferText(card);
     const trustSeal = hasTrustSeal(card);
     const featured = isFeatured(card);
     const featuredOrder = getFeaturedOrder(card);
+    const stars = formatStars(card);
+    const ratingValue = getRatingNumber(card);
     const comments = getComments(card);
+    const rawCategory = getRawCategory(card);
 
     const videoUrl = getVideoUrl(card);
     const showVideo = Boolean(videoUrl && isVideoAuthorized(card));
-
-    let kmHtml = "";
-    const coords = getLatLng(card);
-    if (currentUserPosition && coords) {
-      const km = distanceKm(
-        currentUserPosition.lat,
-        currentUserPosition.lng,
-        coords.lat,
-        coords.lng
-      );
-      kmHtml = `
-        <div class="detail-line" style="color:#008b8b; font-weight:700;">
-          <i class="fa-solid fa-location-crosshairs"></i>
-          <span>${escapeHtml(km.toFixed(1))} km de tu ubicación</span>
-        </div>
-      `;
-    }
 
     const mediaHtml = showVideo
       ? `
@@ -567,13 +523,24 @@ function renderCards(cards) {
 
     const article = document.createElement("article");
     article.className = "business-card promo-card";
-    article.dataset.category = categorySlug;
+    article.dataset.category = getCardFilterKey(card);
 
     article.innerHTML = `
       ${mediaHtml}
 
       <div class="promo-info">
         <h3>${escapeHtml(name)}</h3>
+
+        ${
+          rawCategory
+            ? `
+          <div class="detail-line">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>${escapeHtml(rawCategory)}</span>
+          </div>
+        `
+            : ""
+        }
 
         ${
           trustSeal
@@ -641,8 +608,6 @@ function renderCards(cards) {
             : ""
         }
 
-        ${kmHtml}
-
         <div class="detail-line">
           <i class="fa-solid fa-star"></i>
           <span>Calificación: ${escapeHtml(stars)} (${ratingValue.toFixed(1)})</span>
@@ -655,10 +620,7 @@ function renderCards(cards) {
             <i class="fa-regular fa-comment-dots"></i>
             <div>
               ${comments
-                .map(
-                  (comment) =>
-                    `<div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>`
-                )
+                .map((comment) => `<div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>`)
                 .join("")}
             </div>
           </div>
@@ -708,31 +670,17 @@ function renderCards(cards) {
 // ===============================
 function applyFilters() {
   const searchTerm = normalizeText(searchInput?.value);
-
   let filtered = [...allBusinessCards];
 
   if (currentCategory !== "todos") {
-    filtered = filtered.filter((card) => getCategorySlug(card) === currentCategory);
+    filtered = filtered.filter((card) => {
+      const key = getCardFilterKey(card);
+      return key === currentCategory;
+    });
   }
 
   if (searchTerm) {
     filtered = filtered.filter((card) => getSearchBlob(card).includes(searchTerm));
-  }
-
-  if (currentKmFilter != null && currentUserPosition) {
-    filtered = filtered.filter((card) => {
-      const coords = getLatLng(card);
-      if (!coords) return false;
-
-      const km = distanceKm(
-        currentUserPosition.lat,
-        currentUserPosition.lng,
-        coords.lat,
-        coords.lng
-      );
-
-      return km <= currentKmFilter;
-    });
   }
 
   filtered.sort((a, b) => {
@@ -776,6 +724,7 @@ function loadBusinessCards() {
       });
 
       allBusinessCards = rows;
+      renderMoreCategories(rows);
       applyFilters();
     });
   } catch (error) {
@@ -788,6 +737,41 @@ function loadBusinessCards() {
     `;
   }
 }
+
+// ===============================
+// SUBIR TARJETA
+// ===============================
+btnSubirTarjeta?.addEventListener("click", () => {
+  const opcion = confirm(
+    "¿Deseas enviar tu información por WhatsApp?\n\nAceptar = WhatsApp\nCancelar = Correo"
+  );
+
+  if (opcion) {
+    const mensaje = encodeURIComponent(
+      "Hola, quiero subir mi tarjeta de negocio al Tarjetero Digital TJD.\n\n" +
+      "Nombre del negocio:\n" +
+      "Categoría:\n" +
+      "Teléfono:\n" +
+      "Dirección:\n" +
+      "Horario:\n" +
+      "Sitio Web:\n" +
+      "Descripción:"
+    );
+
+    window.open(`https://wa.me/${TARJETERO_WHATSAPP}?text=${mensaje}`, "_blank");
+  } else {
+    window.location.href =
+      `mailto:${TARJETERO_EMAIL}?subject=Subir Tarjeta Tarjetero Digital TJD&body=` +
+      `Hola,%20quiero%20subir%20mi%20tarjeta%20de%20negocio.%0A%0A` +
+      `Nombre%20del%20negocio:%0A` +
+      `Categoría:%0A` +
+      `Teléfono:%0A` +
+      `Dirección:%0A` +
+      `Horario:%0A` +
+      `Sitio%20Web:%0A` +
+      `Descripción:`;
+  }
+});
 
 // ===============================
 // EVENTOS
@@ -805,16 +789,6 @@ chips.forEach((chip) => {
   });
 });
 
-moreCategoryItems.forEach((item) => {
-  item.addEventListener("click", () => {
-    const selectedCategory = item.dataset.category || "otros";
-    chips.forEach((c) => c.classList.remove("active"));
-    currentCategory = selectedCategory;
-    moreCategoriesMenu?.classList.remove("show");
-    applyFilters();
-  });
-});
-
 btnMas?.addEventListener("click", () => {
   moreCategoriesMenu?.classList.toggle("show");
 });
@@ -823,11 +797,12 @@ btnGrid?.addEventListener("click", () => {
   moreCategoriesMenu?.classList.toggle("show");
 });
 
-btnKmTop?.addEventListener("click", handleKmSearch);
-btnKmBottom?.addEventListener("click", handleKmSearch);
+btnKmTop?.addEventListener("click", () => {
+  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
+});
 
-btnSubirTarjeta?.addEventListener("click", () => {
-  window.open("https://TU-ENLACE-REAL-AQUI.com", "_blank");
+btnKmBottom?.addEventListener("click", () => {
+  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
 });
 
 btnDescargarApp?.addEventListener("click", () => {
@@ -868,9 +843,8 @@ window.openMaps = openMaps;
 window.openPhone = openPhone;
 window.openWhatsapp = openWhatsapp;
 window.openWebsite = openWebsite;
-window.clearKmFilter = clearKmFilter;
 
 // ===============================
-// INICIO
+// INIT
 // ===============================
 loadBusinessCards();
