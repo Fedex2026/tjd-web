@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getFirestore,
   collection,
-  getDocs,
+  onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -30,6 +30,19 @@ const btnAppStore = document.getElementById("btnAppStore");
 const btnMas = document.getElementById("btnMas");
 const btnGrid = document.getElementById("btnGrid");
 
+const moreCategoriesMenu = document.getElementById("moreCategoriesMenu");
+const moreCategoryItems = document.querySelectorAll(".more-category-item");
+
+const btnAvisoTop = document.getElementById("btnAvisoTop");
+const btnPoliticasTop = document.getElementById("btnPoliticasTop");
+const btnAvisoFooter = document.getElementById("btnAvisoFooter");
+const btnPoliticasFooter = document.getElementById("btnPoliticasFooter");
+const btnDeslindeFooter = document.getElementById("btnDeslindeFooter");
+
+const privacyModal = document.getElementById("privacyModal");
+const policiesModal = document.getElementById("policiesModal");
+const disclaimerModal = document.getElementById("disclaimerModal");
+
 let allBusinessCards = [];
 let currentCategory = "todos";
 
@@ -43,11 +56,25 @@ function normalizeText(value) {
 
 function getCategorySlug(card) {
   const raw = normalizeText(card.categoria || card.category || "");
+
   if (raw.includes("medic")) return "medicos";
   if (raw.includes("segur")) return "seguros";
   if (raw.includes("taller")) return "talleres";
   if (raw.includes("panader")) return "panaderias";
   if (raw.includes("restaurant") || raw.includes("comida")) return "restaurantes";
+
+  if (raw.includes("refaccion")) return "refaccionarias";
+  if (raw.includes("electric")) return "electricistas";
+  if (raw.includes("abogad")) return "abogados";
+  if (raw.includes("radiador")) return "radiadores";
+  if (raw.includes("hojalat") || raw.includes("pintura")) return "hojalateria";
+  if (raw.includes("llanta")) return "llantas";
+  if (raw.includes("grua")) return "gruas";
+  if (raw.includes("autolav")) return "autolavados";
+  if (raw.includes("mecanic")) return "mecanicos";
+  if (raw.includes("ropa") || raw.includes("accesorio")) return "ropa";
+  if (raw.includes("podolog")) return "podologos";
+
   return "otros";
 }
 
@@ -111,6 +138,21 @@ function getSchedule(card) {
   return safeText(card.horarios) || safeText(card.horario) || "";
 }
 
+function getOfferText(card) {
+  return safeText(card.ofertas || card.promoTexto || "");
+}
+
+function hasTrustSeal(card) {
+  return card.planActivo === true;
+}
+
+function getVideoUrl(card) {
+  if (card.videoPublicidadAutorizado === true && safeText(card.videoPublicidadUrl)) {
+    return safeText(card.videoPublicidadUrl);
+  }
+  return "";
+}
+
 function getSearchBlob(card) {
   return [
     card.nombre,
@@ -140,6 +182,14 @@ function escapeHtml(text) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeAttr(text) {
+  return safeText(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 function openMaps(address) {
@@ -176,10 +226,23 @@ function openWebsite(url) {
     alert("Esta tarjeta no tiene sitio web.");
     return;
   }
-  const finalUrl = raw.startsWith("http://") || raw.startsWith("https://")
-    ? raw
-    : `https://${raw}`;
+  const finalUrl =
+    raw.startsWith("http://") || raw.startsWith("https://")
+      ? raw
+      : `https://${raw}`;
   window.open(finalUrl, "_blank");
+}
+
+function openModal(modal) {
+  if (!modal) return;
+  modal.classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.remove("show");
+  document.body.style.overflow = "";
 }
 
 function renderCards(cards) {
@@ -205,23 +268,54 @@ function renderCards(cards) {
     const website = getWebsite(card);
     const schedule = getSchedule(card);
     const stars = formatStars(card);
+    const offerText = getOfferText(card);
+    const trustSeal = hasTrustSeal(card);
+    const videoUrl = getVideoUrl(card);
+
+    const mediaHtml = videoUrl
+      ? `
+        <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
+          <video
+            src="${escapeAttr(videoUrl)}"
+            controls
+            muted
+            playsinline
+            preload="metadata"
+            style="width:100%; height:100%; object-fit:cover; display:block; background:#000;"
+          ></video>
+        </div>
+      `
+      : `
+        <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
+          <img
+            src="${escapeAttr(image)}"
+            alt="${escapeAttr(name)}"
+            style="width:100%; height:100%; object-fit:cover; display:block;"
+            onerror="this.src='logotjd.png';"
+          />
+        </div>
+      `;
 
     const article = document.createElement("article");
     article.className = "business-card promo-card";
     article.dataset.category = categorySlug;
 
     article.innerHTML = `
-      <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
-        <img
-          src="${escapeHtml(image)}"
-          alt="${escapeHtml(name)}"
-          style="width:100%; height:100%; object-fit:cover; display:block;"
-          onerror="this.src='logotjd.png';"
-        />
-      </div>
+      ${mediaHtml}
 
       <div class="promo-info">
         <h3>${escapeHtml(name)}</h3>
+
+        ${
+          trustSeal
+            ? `
+          <div class="detail-line" style="color:#2e9d57; font-weight:800;">
+            <i class="fa-solid fa-shield-heart"></i>
+            <span>Sello de confianza</span>
+          </div>
+        `
+            : ""
+        }
 
         ${
           address
@@ -251,6 +345,17 @@ function renderCards(cards) {
           <div class="detail-line whatsapp-line">
             <i class="fa-brands fa-whatsapp"></i>
             <span>${escapeHtml(whatsapp)}</span>
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          offerText
+            ? `
+          <div class="detail-line" style="color:#7a3cff; font-weight:700;">
+            <i class="fa-solid fa-tag"></i>
+            <span>Oferta: ${escapeHtml(offerText)}</span>
           </div>
         `
             : ""
@@ -294,7 +399,7 @@ function renderCards(cards) {
 }
 
 function applyFilters() {
-  const searchTerm = normalizeText(searchInput.value);
+  const searchTerm = normalizeText(searchInput?.value);
 
   let filtered = [...allBusinessCards];
 
@@ -323,29 +428,29 @@ function applyFilters() {
   renderCards(filtered);
 }
 
-async function loadBusinessCards() {
+function loadBusinessCards() {
   try {
-    const snapshot = await getDocs(collection(db, "cards"));
+    onSnapshot(collection(db, "cards"), (snapshot) => {
+      const rows = [];
 
-    const rows = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
 
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
+        const isBusiness =
+          data?.tab === "business" ||
+          data?.type === "business";
 
-      const isBusiness =
-        data?.tab === "business" ||
-        data?.type === "business";
+        if (isBusiness) {
+          rows.push({
+            id: docSnap.id,
+            ...data,
+          });
+        }
+      });
 
-      if (isBusiness) {
-        rows.push({
-          id: docSnap.id,
-          ...data,
-        });
-      }
+      allBusinessCards = rows;
+      applyFilters();
     });
-
-    allBusinessCards = rows;
-    applyFilters();
   } catch (error) {
     console.error("Error cargando cards:", error);
     cardsContainer.innerHTML = `
@@ -357,16 +462,35 @@ async function loadBusinessCards() {
   }
 }
 
-searchInput.addEventListener("keyup", applyFilters);
-searchBtn.addEventListener("click", applyFilters);
+searchInput?.addEventListener("keyup", applyFilters);
+searchBtn?.addEventListener("click", applyFilters);
 
 chips.forEach((chip) => {
   chip.addEventListener("click", () => {
     chips.forEach((c) => c.classList.remove("active"));
     chip.classList.add("active");
     currentCategory = chip.dataset.category || "todos";
+    moreCategoriesMenu?.classList.remove("show");
     applyFilters();
   });
+});
+
+moreCategoryItems.forEach((item) => {
+  item.addEventListener("click", () => {
+    const selectedCategory = item.dataset.category || "otros";
+    chips.forEach((c) => c.classList.remove("active"));
+    currentCategory = selectedCategory;
+    moreCategoriesMenu?.classList.remove("show");
+    applyFilters();
+  });
+});
+
+btnMas?.addEventListener("click", () => {
+  moreCategoriesMenu?.classList.toggle("show");
+});
+
+btnGrid?.addEventListener("click", () => {
+  moreCategoriesMenu?.classList.toggle("show");
 });
 
 btnKmTop?.addEventListener("click", () => {
@@ -389,12 +513,27 @@ btnAppStore?.addEventListener("click", () => {
   alert("Aquí ponemos el enlace real de App Store.");
 });
 
-btnMas?.addEventListener("click", () => {
-  alert("Aquí luego abrimos más categorías.");
+btnAvisoTop?.addEventListener("click", () => openModal(privacyModal));
+btnPoliticasTop?.addEventListener("click", () => openModal(policiesModal));
+btnAvisoFooter?.addEventListener("click", () => openModal(privacyModal));
+btnPoliticasFooter?.addEventListener("click", () => openModal(policiesModal));
+btnDeslindeFooter?.addEventListener("click", () => openModal(disclaimerModal));
+
+document.querySelectorAll("[data-close]").forEach((el) => {
+  el.addEventListener("click", () => {
+    const modalId = el.getAttribute("data-close");
+    if (modalId) {
+      closeModal(document.getElementById(modalId));
+    }
+  });
 });
 
-btnGrid?.addEventListener("click", () => {
-  alert("Aquí luego abrimos menú de categorías.");
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeModal(privacyModal);
+    closeModal(policiesModal);
+    closeModal(disclaimerModal);
+  }
 });
 
 window.openMaps = openMaps;
