@@ -45,23 +45,73 @@ const disclaimerModal = document.getElementById("disclaimerModal");
 
 let allBusinessCards = [];
 let currentCategory = "todos";
+let currentKmFilter = null;
+let userLocation = null;
 
+// ===============================
+// HELPERS TEXTO
+// ===============================
 function safeText(value) {
   return value == null ? "" : String(value);
 }
 
 function normalizeText(value) {
-  return safeText(value).toLowerCase().trim();
+  return safeText(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
+function escapeHtml(text) {
+  return safeText(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttr(text) {
+  return safeText(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+// ===============================
+// CATEGORÍAS
+// ===============================
 function getCategorySlug(card) {
   const raw = normalizeText(card.categoria || card.category || "");
 
-  if (raw.includes("medic")) return "medicos";
-  if (raw.includes("segur")) return "seguros";
-  if (raw.includes("taller")) return "talleres";
+  if (
+    raw.includes("medic") ||
+    raw.includes("doctor") ||
+    raw.includes("clinica") ||
+    raw.includes("hospital")
+  ) return "medicos";
+
+  if (
+    raw.includes("segur") ||
+    raw.includes("aseguranza") ||
+    raw.includes("fianza")
+  ) return "seguros";
+
+  if (
+    raw.includes("taller") ||
+    raw.includes("mecanico")
+  ) return "talleres";
+
   if (raw.includes("panader")) return "panaderias";
-  if (raw.includes("restaurant") || raw.includes("comida")) return "restaurantes";
+
+  if (
+    raw.includes("restaurant") ||
+    raw.includes("comida") ||
+    raw.includes("taquer") ||
+    raw.includes("cafeter")
+  ) return "restaurantes";
 
   if (raw.includes("refaccion")) return "refaccionarias";
   if (raw.includes("electric")) return "electricistas";
@@ -69,26 +119,23 @@ function getCategorySlug(card) {
   if (raw.includes("radiador")) return "radiadores";
   if (raw.includes("hojalat") || raw.includes("pintura")) return "hojalateria";
   if (raw.includes("llanta")) return "llantas";
-  if (raw.includes("grua")) return "gruas";
+
+  if (
+    raw.includes("grua") ||
+    raw.includes("remolque") ||
+    raw.includes("arrastre")
+  ) return "gruas";
+
   if (raw.includes("autolav")) return "autolavados";
-  if (raw.includes("mecanic")) return "mecanicos";
-  if (raw.includes("ropa") || raw.includes("accesorio")) return "ropa";
+  if (raw.includes("ropa") || raw.includes("accesorio") || raw.includes("fashion")) return "ropa";
   if (raw.includes("podolog")) return "podologos";
 
   return "otros";
 }
 
-function formatStars(card) {
-  const n =
-    Number(card.promedioCalificacion) ||
-    Number(card.rating) ||
-    Number(card.calificacion) ||
-    0;
-
-  const rounded = Math.max(0, Math.min(5, Math.round(n)));
-  return "★".repeat(rounded) + "☆".repeat(5 - rounded);
-}
-
+// ===============================
+// DATOS TARJETA
+// ===============================
 function getCardImage(card) {
   return (
     card.imagenFrontal ||
@@ -147,10 +194,64 @@ function hasTrustSeal(card) {
 }
 
 function getVideoUrl(card) {
-  if (card.videoPublicidadAutorizado === true && safeText(card.videoPublicidadUrl)) {
-    return safeText(card.videoPublicidadUrl);
+  return (
+    safeText(card.videoPublicidadUrl) ||
+    safeText(card.videoUrl) ||
+    safeText(card.videoPromoUrl) ||
+    ""
+  );
+}
+
+function isVideoAuthorized(card) {
+  if (card.videoPublicidadAutorizado === true) return true;
+  if (card.videoAutorizado === true) return true;
+  if (card.videoApproved === true) return true;
+  return false;
+}
+
+function getRatingNumber(card) {
+  const n =
+    Number(card.promedioCalificacion) ||
+    Number(card.rating) ||
+    Number(card.calificacion) ||
+    Number(card.estrellas) ||
+    0;
+
+  return Math.max(0, Math.min(5, n));
+}
+
+function formatStars(card) {
+  const rounded = Math.round(getRatingNumber(card));
+  return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+}
+
+function getComments(card) {
+  if (Array.isArray(card.comentarios) && card.comentarios.length) {
+    return card.comentarios
+      .map((c) => {
+        if (typeof c === "string") return c;
+        return safeText(c?.comentario || c?.texto || c?.text);
+      })
+      .filter(Boolean)
+      .slice(0, 2);
   }
-  return "";
+
+  if (Array.isArray(card.comments) && card.comments.length) {
+    return card.comments
+      .map((c) => {
+        if (typeof c === "string") return c;
+        return safeText(c?.comentario || c?.texto || c?.text);
+      })
+      .filter(Boolean)
+      .slice(0, 2);
+  }
+
+  if (card.calificacion && typeof card.calificacion === "object") {
+    const singleComment = safeText(card.calificacion.comentario);
+    return singleComment ? [singleComment] : [];
+  }
+
+  return [];
 }
 
 function getSearchBlob(card) {
@@ -170,28 +271,116 @@ function getSearchBlob(card) {
     card.promoTexto,
     card.inventarioKeywords,
     card.serviciosKeywords,
+    card.descripcion,
+    card.tipoServicio,
   ]
     .map((v) => normalizeText(v))
     .join(" ");
 }
 
-function escapeHtml(text) {
-  return safeText(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+// ===============================
+// GEOLOCALIZACIÓN
+// ===============================
+function getLatLng(card) {
+  const lat =
+    Number(card.lat) ||
+    Number(card.latitude) ||
+    Number(card.latitud) ||
+    Number(card?.ubicacion?.lat) ||
+    Number(card?.location?.lat) ||
+    Number(card?.coords?.lat);
+
+  const lng =
+    Number(card.lng) ||
+    Number(card.longitude) ||
+    Number(card.longitud) ||
+    Number(card?.ubicacion?.lng) ||
+    Number(card?.location?.lng) ||
+    Number(card?.coords?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
 }
 
-function escapeAttr(text) {
-  return safeText(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
+function askForKm() {
+  const value = prompt("¿Cuántos kilómetros quieres buscar?");
+  if (value === null) return null;
+
+  const km = Number(String(value).replace(",", ".").trim());
+  if (!Number.isFinite(km) || km <= 0) {
+    alert("Ingresa una cantidad válida de kilómetros.");
+    return null;
+  }
+
+  return km;
+}
+
+function getUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Tu navegador no soporta ubicación."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => {
+        reject(new Error("No se pudo obtener tu ubicación."));
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
+
+async function applyKmFilter() {
+  const km = askForKm();
+  if (km == null) return;
+
+  try {
+    userLocation = await getUserLocation();
+    currentKmFilter = km;
+    applyFilters();
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo obtener tu ubicación para buscar por km.");
+  }
+}
+
+function clearKmFilter() {
+  currentKmFilter = null;
+  applyFilters();
+}
+
+// ===============================
+// ACCIONES
+// ===============================
 function openMaps(address) {
   const encoded = encodeURIComponent(address || "");
   if (!encoded) {
@@ -226,13 +415,18 @@ function openWebsite(url) {
     alert("Esta tarjeta no tiene sitio web.");
     return;
   }
+
   const finalUrl =
     raw.startsWith("http://") || raw.startsWith("https://")
       ? raw
       : `https://${raw}`;
+
   window.open(finalUrl, "_blank");
 }
 
+// ===============================
+// MODALES LEGALES
+// ===============================
 function openModal(modal) {
   if (!modal) return;
   modal.classList.add("show");
@@ -245,6 +439,9 @@ function closeModal(modal) {
   document.body.style.overflow = "";
 }
 
+// ===============================
+// RENDER
+// ===============================
 function renderCards(cards) {
   cardsContainer.innerHTML = "";
 
@@ -268,11 +465,22 @@ function renderCards(cards) {
     const website = getWebsite(card);
     const schedule = getSchedule(card);
     const stars = formatStars(card);
+    const ratingValue = getRatingNumber(card);
     const offerText = getOfferText(card);
     const trustSeal = hasTrustSeal(card);
-    const videoUrl = getVideoUrl(card);
+    const comments = getComments(card);
 
-    const mediaHtml = videoUrl
+    const videoUrl = getVideoUrl(card);
+    const showVideo = Boolean(videoUrl && isVideoAuthorized(card));
+
+    let kmText = "";
+    const coords = getLatLng(card);
+    if (userLocation && coords) {
+      const km = distanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
+      kmText = ${km.toFixed(1)} km;
+    }
+
+    const mediaHtml = showVideo
       ? `
         <div class="banner-art" style="padding:0; overflow:hidden; min-height:260px;">
           <video
@@ -361,6 +569,40 @@ function renderCards(cards) {
             : ""
         }
 
+        ${
+          kmText
+            ? `
+          <div class="detail-line" style="color:#008b8b; font-weight:700;">
+            <i class="fa-solid fa-location-crosshairs"></i>
+            <span>${escapeHtml(kmText)} de tu ubicación</span>
+          </div>
+        `
+            : ""
+        }
+
+        <div class="detail-line">
+          <i class="fa-solid fa-star"></i>
+          <span>Calificación: ${escapeHtml(stars)} (${ratingValue.toFixed(1)})</span>
+        </div>
+
+        ${
+          comments.length
+            ? `
+          <div class="detail-line" style="align-items:flex-start;">
+            <i class="fa-regular fa-comment-dots"></i>
+            <div>
+              ${comments
+                .map(
+                  (comment) =>
+                    <div style="margin-bottom:6px;">• ${escapeHtml(comment)}</div>
+                )
+                .join("")}
+            </div>
+          </div>
+        `
+            : ""
+        }
+
         <div class="promo-footer">
           <div class="footer-actions">
             <button class="footer-chip js-ubicacion" type="button">
@@ -398,6 +640,9 @@ function renderCards(cards) {
   });
 }
 
+// ===============================
+// FILTROS
+// ===============================
 function applyFilters() {
   const searchTerm = normalizeText(searchInput?.value);
 
@@ -409,6 +654,16 @@ function applyFilters() {
 
   if (searchTerm) {
     filtered = filtered.filter((card) => getSearchBlob(card).includes(searchTerm));
+  }
+
+  if (currentKmFilter != null && userLocation) {
+    filtered = filtered.filter((card) => {
+      const coords = getLatLng(card);
+      if (!coords) return false;
+
+      const km = distanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
+      return km <= currentKmFilter;
+    });
   }
 
   filtered.sort((a, b) => {
@@ -428,6 +683,9 @@ function applyFilters() {
   renderCards(filtered);
 }
 
+// ===============================
+// FIREBASE REALTIME
+// ===============================
 function loadBusinessCards() {
   try {
     onSnapshot(collection(db, "cards"), (snapshot) => {
@@ -462,6 +720,9 @@ function loadBusinessCards() {
   }
 }
 
+// ===============================
+// EVENTOS
+// ===============================
 searchInput?.addEventListener("keyup", applyFilters);
 searchBtn?.addEventListener("click", applyFilters);
 
@@ -493,24 +754,19 @@ btnGrid?.addEventListener("click", () => {
   moreCategoriesMenu?.classList.toggle("show");
 });
 
-btnKmTop?.addEventListener("click", () => {
-  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
-});
-
-btnKmBottom?.addEventListener("click", () => {
-  alert("La búsqueda por km la conectamos en el siguiente paso con ubicación real.");
-});
+btnKmTop?.addEventListener("click", applyKmFilter);
+btnKmBottom?.addEventListener("click", applyKmFilter);
 
 btnSubirTarjeta?.addEventListener("click", () => {
-  alert("Aquí podemos mandar al formulario o a la app para subir tarjeta.");
+  window.open("https://TU-ENLACE-REAL-AQUI.com", "_blank");
 });
 
 btnDescargarApp?.addEventListener("click", () => {
-  alert("Aquí ponemos el enlace real de descarga Android.");
+  window.open("https://TU-ENLACE-ANDROID-AQUI.com", "_blank");
 });
 
 btnAppStore?.addEventListener("click", () => {
-  alert("Aquí ponemos el enlace real de App Store.");
+  window.open("https://TU-ENLACE-IOS-AQUI.com", "_blank");
 });
 
 btnAvisoTop?.addEventListener("click", () => openModal(privacyModal));
@@ -536,9 +792,16 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+// ===============================
+// EXPONER FUNCIONES
+// ===============================
 window.openMaps = openMaps;
 window.openPhone = openPhone;
 window.openWhatsapp = openWhatsapp;
 window.openWebsite = openWebsite;
+window.clearKmFilter = clearKmFilter;
 
+// ===============================
+// INIT
+// ===============================
 loadBusinessCards();
