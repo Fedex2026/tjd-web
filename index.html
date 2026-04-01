@@ -41,12 +41,12 @@
               Buscar por km
             </button>
 
-            <button class="mini-icon" type="button">
-              <i class="fa-solid fa-user"></i>
+            <button class="mini-icon" id="btnAvisoTop" type="button" title="Aviso de privacidad">
+              <i class="fa-solid fa-user-shield"></i>
             </button>
 
-            <button class="mini-icon" type="button">
-              <i class="fa-solid fa-id-card"></i>
+            <button class="mini-icon" id="btnPoliticasTop" type="button" title="Políticas de uso">
+              <i class="fa-solid fa-file-contract"></i>
             </button>
           </div>
 
@@ -88,6 +88,21 @@
           <i class="fa-solid fa-grip"></i>
         </button>
       </div>
+
+      <div class="more-categories-menu" id="moreCategoriesMenu">
+        <button class="more-category-item" data-category="refaccionarias" type="button">Refaccionarias</button>
+        <button class="more-category-item" data-category="electricistas" type="button">Electricistas</button>
+        <button class="more-category-item" data-category="abogados" type="button">Abogados</button>
+        <button class="more-category-item" data-category="radiadores" type="button">Radiadores</button>
+        <button class="more-category-item" data-category="hojalateria" type="button">Hojalatería</button>
+        <button class="more-category-item" data-category="llantas" type="button">Llantas</button>
+        <button class="more-category-item" data-category="gruas" type="button">Grúas</button>
+        <button class="more-category-item" data-category="autolavados" type="button">Autolavados</button>
+        <button class="more-category-item" data-category="mecanicos" type="button">Mecánicos</button>
+        <button class="more-category-item" data-category="ropa" type="button">Ropa y accesorios</button>
+        <button class="more-category-item" data-category="podologos" type="button">Podólogos</button>
+        <button class="more-category-item" data-category="otros" type="button">Otros</button>
+      </div>
     </section>
 
     <main class="main-content">
@@ -95,117 +110,132 @@
         <h2>Negocios destacados</h2>
       </section>
 
-      <section class="cards-container" id="cardsContainer">
-        <!-- CARD 1 -->
-        <article class="business-card featured-card" data-category="seguros">
-          <div class="featured-left">
-            <div class="featured-logo">TJD</div>
-          </div>
-
-          <div class="featured-right">
-            <h3>Lic. Fabio Lara Gonzalez</h3>
-
-            <div class="denison-logo-wrap">
-              <div class="denison-symbol">◎</div>
-              <div class="denison-copy">
-                <div class="denison-name">DENISON</div>
-                <div class="denison-sub">INTERNACIONAL, S.A. DE C.V.</div>
-              </div>
-            </div>
-
-            <p class="business-address">
-              Mariano Escobedo 131-A Fracc Ind san Nicolas<br />
-              Tlalnepantla, Estado de México
-            </p>
-
-            <p class="business-tel">TEL: &nbsp; +52 555564585</p>
-
-            <div class="business-links">
-              <div class="info-line">
-                <i class="fa-regular fa-envelope"></i>
-                <span>fabiola@denisoninternacional.com</span>
-              </div>
-
-              <div class="info-line">
-                <i class="fa-solid fa-globe"></i>
-                <span>denisoninternacional.com</span>
-                <span class="stars gold">★★★★☆</span>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <!-- CARD 2 -->
-        <article class="business-card promo-card" data-category="talleres">
-          <div class="banner-art">
-            <div class="banner-shine"></div>
-
-            <div class="banner-top">
-              <div class="banner-title-big">RADIADORES INDUSTRIALES</div>
-              <div class="banner-subtitle">VENTA, FABRICACIÓN Y REPARACIÓN</div>
-            </div>
-
-            <div class="banner-center">
-              <div class="banner-small-text">SOMOS ESPECIALISTAS EN SOLDADURA DE ALUMINIO</div>
-              <div class="banner-name">ANDRÉS IVÁN RUIZ VERA</div>
-              <div class="banner-service">SERVICIO A DOMICILIO</div>
-            </div>
-
-            <div class="banner-km-badge">Buscar a 5 km &rsaquo;</div>
-
-            <div class="banner-bottom">
-              <div>Blvd Tultitlán Pie, Lote 7,<br />Los Reyes Tultitlán, Edo. de México.</div>
-              <div class="banner-phone">Cel. 55 8320 8687</div>
-            </div>
-          </div>
-
-          <div class="promo-info">
-            <h3>Radiadores Industriales</h3>
-
-            <div class="detail-line">
-              <i class="fa-solid fa-location-dot"></i>
-              <span>Blvd Tultitlán Pie, Lote 7, Los Reyes Tultitlán, Estado de México</span>
-            </div>
-
-            <div class="detail-line">
-              <i class="fa-regular fa-clock"></i>
-              <span>8 am a 6 pm</span>
-            </div>
-
-            <div class="detail-line whatsapp-line">
-              <i class="fa-brands fa-whatsapp"></i>
-              <span>+52 5588208687</span>
-            </div>
-
-            <div class="promo-footer">
-              <div class="footer-actions">
-                <button class="footer-chip" type="button">
-                  <i class="fa-solid fa-location-dot"></i>
-                  Ubicación
-                </button>
-
-                <button class="footer-chip footer-chip-green" type="button">
-                  <i class="fa-solid fa-phone"></i>
-                  Teléfono
-                </button>
-
-                <button class="footer-chip" type="button">
-                  <i class="fa-solid fa-location-pin"></i>
-                  Más
-                </button>
-
-                <button class="footer-chip" type="button">
-                  <i class="fa-solid fa-globe"></i>
-                  Web / Promo
-                </button>
-              </div>
-
-              <div class="footer-stars gold">★★★★★</div>
-            </div>
-          </div>
-        </article>
-      </section>
+      <section class="cards-container" id="cardsContainer"></section>
     </main>
+
+    <footer class="legal-footer">
+      <div class="legal-footer-inner">
+        <div class="legal-copy">
+          <strong>Tarjetero Digital TJD</strong>
+          <span>Directorio digital de negocios y servicios.</span>
+        </div>
+
+        <div class="legal-links">
+          <button class="legal-link-btn" id="btnAvisoFooter" type="button">Aviso de Privacidad</button>
+          <button class="legal-link-btn" id="btnPoliticasFooter" type="button">Políticas de Uso</button>
+          <button class="legal-link-btn" id="btnDeslindeFooter" type="button">Deslinde de Responsabilidad</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- MODAL AVISO -->
+  <div class="legal-modal" id="privacyModal">
+    <div class="legal-backdrop" data-close="privacyModal"></div>
+    <div class="legal-modal-card">
+      <button class="legal-close" data-close="privacyModal" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <h3>Aviso de Privacidad</h3>
+
+      <p>
+        Tarjetero Digital, en cumplimiento con la Ley Federal de Protección de Datos Personales en
+        Posesión de los Particulares, informa a sus usuarios que los datos personales recabados a
+        través de esta plataforma serán utilizados exclusivamente para los fines relacionados con el
+        funcionamiento del servicio.
+      </p>
+
+      <h4>Datos que podemos recopilar</h4>
+      <ul>
+        <li>Nombre</li>
+        <li>Teléfono</li>
+        <li>WhatsApp</li>
+        <li>Dirección</li>
+        <li>Categoría del negocio</li>
+        <li>Ubicación aproximada</li>
+        <li>Imágenes, promociones, banners y videos publicados por el usuario</li>
+      </ul>
+
+      <h4>Finalidades</h4>
+      <ul>
+        <li>Mostrar tarjetas personales y de negocios dentro de la plataforma</li>
+        <li>Contactar al usuario en relación con su cuenta o servicios</li>
+        <li>Mejorar la experiencia y funcionamiento del sitio y la aplicación</li>
+      </ul>
+
+      <p>
+        Tarjetero Digital no vende, renta ni comparte datos personales con terceros ajenos a la
+        plataforma. El usuario es responsable de la veracidad de la información proporcionada.
+      </p>
+
+      <p>
+        Al utilizar esta plataforma, el usuario acepta este Aviso de Privacidad.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL POLITICAS -->
+  <div class="legal-modal" id="policiesModal">
+    <div class="legal-backdrop" data-close="policiesModal"></div>
+    <div class="legal-modal-card">
+      <button class="legal-close" data-close="policiesModal" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <h3>Políticas de Uso</h3>
+
+      <p>
+        Tarjetero Digital es una plataforma de intermediación digital cuyo objetivo es mostrar
+        información proporcionada directamente por los usuarios.
+      </p>
+
+      <h4>Condiciones generales</h4>
+      <ul>
+        <li>El usuario es responsable de toda la información, imagen, banner o video que publique.</li>
+        <li>No se permite publicar contenido falso, ofensivo, ilegal o engañoso.</li>
+        <li>La plataforma puede ocultar, suspender o eliminar contenido que incumpla estas políticas.</li>
+      </ul>
+
+      <h4>Facultades de la plataforma</h4>
+      <ul>
+        <li>Eliminar contenido que infrinja estas políticas</li>
+        <li>Suspender cuentas que hagan uso indebido de la plataforma</li>
+        <li>Modificar estas políticas en cualquier momento sin previo aviso</li>
+      </ul>
+
+      <p>
+        El uso de la plataforma implica la aceptación total de estas Políticas de Uso.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL DESLINDE -->
+  <div class="legal-modal" id="disclaimerModal">
+    <div class="legal-backdrop" data-close="disclaimerModal"></div>
+    <div class="legal-modal-card">
+      <button class="legal-close" data-close="disclaimerModal" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <h3>Deslinde de Responsabilidad</h3>
+
+      <p>
+        Tarjetero Digital no es responsable por la veracidad de la información publicada por los usuarios,
+        ni por la calidad de los productos o servicios ofrecidos dentro del directorio.
+      </p>
+
+      <ul>
+        <li>La plataforma no participa en pagos, acuerdos o contrataciones entre usuarios.</li>
+        <li>Cada tarjeta, promoción, banner, video o contenido es responsabilidad exclusiva del usuario que lo publica.</li>
+        <li>Tarjetero Digital no garantiza resultados derivados del contacto entre usuarios y negocios anunciados.</li>
+        <li>No somos responsables por daños, fraudes, incumplimientos, retrasos o controversias entre las partes.</li>
+      </ul>
+
+      <p>
+        La plataforma funciona únicamente como escaparate digital y medio de exhibición de información.
+      </p>
+    </div>
   </div>
 
   <script type="module" src="script.js"></script>
