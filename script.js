@@ -518,7 +518,7 @@ function openMaps(address) {
     alert("Esta tarjeta no tiene dirección.");
     return;
   }
-  window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}, "_blank")`;
+  window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
 }
 
 function openPhone(phone) {
