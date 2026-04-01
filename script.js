@@ -468,7 +468,7 @@ function openWebsite(url) {
   const finalUrl =
     raw.startsWith("http://") || raw.startsWith("https://")
       ? raw
-      : https://${raw};
+      : `https://${raw}`;
 
   window.open(finalUrl, "_blank");
 }
