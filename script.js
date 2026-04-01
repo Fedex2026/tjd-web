@@ -166,7 +166,7 @@ function openWhatsapp(phone, name) {
     alert("Esta tarjeta no tiene WhatsApp.");
     return;
   }
-  const msg = encodeURIComponent(Hola, vi tu tarjeta en TJD y me interesa tu negocio: ${name});
+  const msg = encodeURIComponent(`Hola, vi tu tarjeta en TJD y me interesa tu negocio: ${name}`);
   window.open(`https://wa.me/${clean}?text=${msg}`, "_blank");
 }
 
@@ -186,7 +186,7 @@ function renderCards(cards) {
   cardsContainer.innerHTML = "";
 
   if (!cards.length) {
-    cardsContainer.innerHTML = ``
+    cardsContainer.innerHTML = `
       <div class="business-card" style="padding:24px;">
         <h3 style="font-size:1.4rem; margin-bottom:8px;">Sin resultados</h3>
         <p style="color:#6b6480;">No encontré tarjetas con esa búsqueda.</p>
@@ -396,5 +396,10 @@ btnMas?.addEventListener("click", () => {
 btnGrid?.addEventListener("click", () => {
   alert("Aquí luego abrimos menú de categorías.");
 });
+
+window.openMaps = openMaps;
+window.openPhone = openPhone;
+window.openWhatsapp = openWhatsapp;
+window.openWebsite = openWebsite;
 
 loadBusinessCards();
