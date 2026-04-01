@@ -10,11 +10,8 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   />
 </head>
-
 <body>
   <div class="app">
-
-    <!-- HEADER -->
     <header class="hero">
       <div class="hero-overlay"></div>
 
@@ -44,32 +41,32 @@
               Buscar por km
             </button>
 
-            <button class="mini-icon" id="btnAvisoTop" type="button">
+            <button class="mini-icon" id="btnAvisoTop" type="button" title="Aviso de privacidad">
               <i class="fa-solid fa-user-shield"></i>
             </button>
 
-            <button class="mini-icon" id="btnPoliticasTop" type="button">
+            <button class="mini-icon" id="btnPoliticasTop" type="button" title="Políticas de uso">
               <i class="fa-solid fa-file-contract"></i>
             </button>
           </div>
 
           <div class="quick-actions">
-            <button class="action-btn action-purple" id="btnKmBottom">
+            <button class="action-btn action-purple" id="btnKmBottom" type="button">
               <i class="fa-solid fa-location-dot"></i>
               Buscar por km
             </button>
 
-            <button class="action-btn action-pink" id="btnSubirTarjeta">
+            <button class="action-btn action-pink" id="btnSubirTarjeta" type="button">
               <i class="fa-solid fa-circle-play"></i>
               Sube tu tarjeta
             </button>
 
-            <button class="action-btn action-dark" id="btnDescargarApp">
+            <button class="action-btn action-dark" id="btnDescargarApp" type="button">
               <i class="fa-brands fa-google-play"></i>
               Descargar app
             </button>
 
-            <button class="action-btn action-dark" id="btnAppStore">
+            <button class="action-btn action-dark" id="btnAppStore" type="button">
               <i class="fa-brands fa-apple"></i>
               App Store
             </button>
@@ -78,49 +75,58 @@
       </div>
     </header>
 
-    <!-- CATEGORIAS -->
     <section class="categories-section">
       <div class="categories-row">
-        <button class="chip chip-green active" data-category="todos">Todos</button>
-        <button class="chip chip-blue" data-category="medicos">Médicos</button>
-        <button class="chip chip-cyan" data-category="seguros">Seguros</button>
-        <button class="chip chip-violet" data-category="talleres">Talleres</button>
-        <button class="chip chip-purple" data-category="panaderias">Panaderías</button>
-        <button class="chip chip-pink" data-category="restaurantes">Restaurantes</button>
-        <button class="chip chip-light" id="btnMas">Más</button>
+        <button class="chip chip-green active" data-category="todos" type="button">Todos</button>
+        <button class="chip chip-blue" data-category="medicos" type="button">Médicos</button>
+        <button class="chip chip-cyan" data-category="seguros" type="button">Seguros</button>
+        <button class="chip chip-violet" data-category="talleres" type="button">Talleres</button>
+        <button class="chip chip-purple" data-category="panaderias" type="button">Panaderías</button>
+        <button class="chip chip-pink" data-category="restaurantes" type="button">Restaurantes</button>
+        <button class="chip chip-light" id="btnMas" type="button">Más</button>
+        <button class="chip chip-grid" id="btnGrid" type="button">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+      </div>
+
+      <div class="more-categories-menu" id="moreCategoriesMenu">
+        <button class="more-category-item" data-category="refaccionarias" type="button">Refaccionarias</button>
+        <button class="more-category-item" data-category="electricistas" type="button">Electricistas</button>
+        <button class="more-category-item" data-category="abogados" type="button">Abogados</button>
+        <button class="more-category-item" data-category="radiadores" type="button">Radiadores</button>
+        <button class="more-category-item" data-category="hojalateria" type="button">Hojalatería</button>
+        <button class="more-category-item" data-category="llantas" type="button">Llantas</button>
+        <button class="more-category-item" data-category="gruas" type="button">Grúas</button>
+        <button class="more-category-item" data-category="autolavados" type="button">Autolavados</button>
+        <button class="more-category-item" data-category="mecanicos" type="button">Mecánicos</button>
+        <button class="more-category-item" data-category="ropa" type="button">Ropa y accesorios</button>
+        <button class="more-category-item" data-category="podologos" type="button">Podólogos</button>
+        <button class="more-category-item" data-category="otros" type="button">Otros</button>
       </div>
     </section>
 
-    <!-- CONTENIDO -->
     <main class="main-content">
-
       <section class="section-title-wrap">
         <h2>Negocios destacados</h2>
       </section>
 
       <section class="cards-container" id="cardsContainer"></section>
 
-      <!-- BOTONES FOOTER TARJETAS -->
       <div class="footer-chips">
-
-        <button class="footer-chip js-calificar">
+        <button class="footer-chip js-calificar" type="button">
           ⭐ Calificar
         </button>
 
-        <button class="footer-chip js-comentar">
+        <button class="footer-chip js-comentar" type="button">
           💬 Comentar
         </button>
 
-        <button class="footer-chip js-opinar">
+        <button class="footer-chip js-opinar" type="button">
           📝 Opinar
         </button>
-
       </div>
-
     </main>
 
-
-    <!-- FOOTER LEGAL -->
     <footer class="legal-footer">
       <div class="legal-footer-inner">
         <div class="legal-copy">
@@ -129,14 +135,126 @@
         </div>
 
         <div class="legal-links">
-          <button class="legal-link-btn" id="btnAvisoFooter">Aviso de Privacidad</button>
-          <button class="legal-link-btn" id="btnPoliticasFooter">Políticas de Uso</button>
-          <button class="legal-link-btn" id="btnDeslindeFooter">Deslinde</button>
+          <button class="legal-link-btn" id="btnAvisoFooter" type="button">Aviso de Privacidad</button>
+          <button class="legal-link-btn" id="btnPoliticasFooter" type="button">Políticas de Uso</button>
+          <button class="legal-link-btn" id="btnDeslindeFooter" type="button">Deslinde de Responsabilidad</button>
         </div>
       </div>
     </footer>
-
   </div>
+
+  <!-- MODAL AVISO -->
+  <div class="legal-modal" id="privacyModal">
+    <div class="legal-backdrop" data-close="privacyModal"></div>
+    <div class="legal-modal-card">
+      <button class="legal-close" data-close="privacyModal" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <h3>Aviso de Privacidad</h3>
+
+      <p>
+        Tarjetero Digital, en cumplimiento con la Ley Federal de Protección de Datos Personales en
+        Posesión de los Particulares, informa a sus usuarios que los datos personales recabados a
+        través de esta plataforma serán utilizados exclusivamente para los fines relacionados con el
+        funcionamiento del servicio.
+      </p>
+
+      <h4>Datos que podemos recopilar</h4>
+      <ul>
+        <li>Nombre</li>
+        <li>Teléfono</li>
+        <li>WhatsApp</li>
+        <li>Dirección</li>
+        <li>Categoría del negocio</li>
+        <li>Ubicación aproximada</li>
+        <li>Imágenes, promociones, banners y videos publicados por el usuario</li>
+      </ul>
+
+      <h4>Finalidades</h4>
+      <ul>
+        <li>Mostrar tarjetas personales y de negocios dentro de la plataforma</li>
+        <li>Contactar al usuario en relación con su cuenta o servicios</li>
+        <li>Mejorar la experiencia y funcionamiento del sitio y la aplicación</li>
+      </ul>
+
+      <p>
+        Tarjetero Digital no vende, renta ni comparte datos personales con terceros ajenos a la
+        plataforma. El usuario es responsable de la veracidad de la información proporcionada.
+      </p>
+
+      <p>
+        Al utilizar esta plataforma, el usuario acepta este Aviso de Privacidad.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL POLITICAS -->
+  <div class="legal-modal" id="policiesModal">
+    <div class="legal-backdrop" data-close="policiesModal"></div>
+    <div class="legal-modal-card">
+      <button class="legal-close" data-close="policiesModal" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <h3>Políticas de Uso</h3>
+
+      <p>
+        Tarjetero Digital es una plataforma de intermediación digital cuyo objetivo es mostrar
+        información proporcionada directamente por los usuarios.
+      </p>
+
+      <h4>Condiciones generales</h4>
+      <ul>
+        <li>El usuario es responsable de toda la información, imagen, banner o video que publique.</li>
+        <li>No se permite publicar contenido falso, ofensivo, ilegal o engañoso.</li>
+        <li>La plataforma puede ocultar, suspender o eliminar contenido que incumpla estas políticas.</li>
+      </ul>
+
+      <h4>Facultades de la plataforma</h4>
+      <ul>
+        <li>Eliminar contenido que infrinja estas políticas</li>
+        <li>Suspender cuentas que hagan uso indebido de la plataforma</li>
+        <li>Modificar estas políticas en cualquier momento sin previo aviso</li>
+      </ul>
+
+      <p>
+        El uso de la plataforma implica la aceptación total de estas Políticas de Uso.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL DESLINDE -->
+  <div class="legal-modal" id="disclaimerModal">
+    <div class="legal-backdrop" data-close="disclaimerModal"></div>
+    <div class="legal-modal-card">
+      <button class="legal-close" data-close="disclaimerModal" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <h3>Deslinde de Responsabilidad</h3>
+
+      <p>
+        Tarjetero Digital no es responsable por la veracidad de la información publicada por los usuarios,
+        ni por la calidad de los productos o servicios ofrecidos dentro del directorio.
+      </p>
+
+      <ul>
+        <li>La plataforma no participa en pagos, acuerdos o contrataciones entre usuarios.</li>
+        <li>Cada tarjeta, promoción, banner, video o contenido es responsabilidad exclusiva del usuario que lo publica.</li>
+        <li>Tarjetero Digital no garantiza resultados derivados del contacto entre usuarios y negocios anunciados.</li>
+        <li>No somos responsables por daños, fraudes, incumplimientos, retrasos o controversias entre las partes.</li>
+      </ul>
+
+      <p>
+        La plataforma funciona únicamente como escaparate digital y medio de exhibición de información.
+      </p>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html></div>
 
 <script type="module" src="script.js"></script>
 
